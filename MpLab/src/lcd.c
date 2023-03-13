@@ -29,6 +29,7 @@
 #include <string.h>
 #include "config.h"
 #include "lcd.h"
+#include <stdio.h>
 /* ************************************************************************** */
 
 /* ------------------------------------------------------------ */
@@ -448,6 +449,12 @@ void LCD_CursorShift(unsigned char fRight)
 	LCD_WriteCommand(bCmd);
 }
 
+void LCD_CLEAR() {
+    char vide[] = "                 ";
+    LCD_WriteStringAtPos(vide, 0, 0);  // effacer LCD ligne du haut
+    LCD_WriteStringAtPos(vide, 1, 0);  // effacer LCD ligne du bas
+}
+
 /* ------------------------------------------------------------ */
 /***	LCD_WriteStringAtPos
 **
@@ -500,6 +507,95 @@ void LCD_WriteStringAtPos(char *szLn, unsigned char idxLine, unsigned char idxPo
 	}
 }
 
+void LCD_seconde(unsigned int seconde) {
+    LCD_WriteIntAtPos(seconde%60, 3, 0, 13, 0);  // affichage des secondes
+    LCD_WriteStringAtPos(":", 0, 13);
+    LCD_WriteIntAtPos(seconde/60%60, 3, 0, 10, 0);  // affichage des minutes
+    LCD_WriteStringAtPos(":", 0, 10);
+    LCD_WriteIntAtPos(seconde/3600%24, 3, 0, 7, 0);  // affichage des heures
+}
+
+
+void int2char(int value, char * text, int nbDigit, int erase) {
+    if (value + abs(value) == 0 && value != 0) {
+        text[0] = '-';
+    }
+    else {
+        text[0] = ' ';
+    }
+    value = abs(value);
+    
+    int i = 0;
+    int div = 10;
+    
+    // pour les unitées
+    text[nbDigit-i-1] = (char) (value % div) + '0'; // extrait le digit
+    value = value / 10;   // divise par 10 et arrondie a la baisse.
+    
+    // pour les autres digits
+    for (i=1; i<nbDigit-1; i++) {
+        if (value == 0 && erase == 1){
+                text[nbDigit-i-1] = ' ';
+        }
+        else {
+            text[nbDigit-i-1] = (char) (value % div) + '0'; // extrait le digit
+        }
+        value = value / 10;   // divise par 10 et arrondie a la baisse.
+    }
+}
+
+void LCD_WriteIntAtPos(int value, int nbDigit, unsigned char idxLine, unsigned char idxPos, int erase) {
+    // valeur  => ce qui sera affiché
+    // nbDigit => nombre de chiffre à afficher
+    // erase   => permet d'effacer les zéros devant le nombre
+    
+    char text[nbDigit];
+    int2char(value, text, nbDigit, erase);
+    
+	if(nbDigit > 16) {
+        text[16] = 0; // trim the string so it contains 32 characters 
+		nbDigit = 16;
+	}
+
+	// Set write position
+	unsigned char bAddrOffset = (idxLine == 0 ? 0: 0x40) + idxPos;
+	LCD_SetWriteDdramPosition(bAddrOffset);
+    delay39us(4);
+
+	unsigned char bIdx = 0;
+	while(bIdx < nbDigit) {
+		LCD_WriteDataByte(text[bIdx]);
+        delay39us(2);
+        //DelayAprox10Us(10);
+		bIdx++;
+	}
+}
+
+void LCD_Task(int Temperature, int humidite, int lumiere, int compteur)
+{
+   /* char temperature2[4] = (char)Temperature;
+    char humidite2[4] = (char)humidite;
+    char lumiere2[4] = (char)lumiere;
+    */
+    
+        char temp1[30];
+        
+        LCD_seconde(compteur);
+        
+        sprintf(temp1,"Temp:%i",Temperature);
+        LCD_WriteStringAtPos(temp1,1,0);
+
+        sprintf(temp1,"Hum:%i",humidite);
+        LCD_WriteStringAtPos(temp1,1,9);
+
+      //  sprintf(temp1,"Luminosite:%i",lumiere);
+       // LCD_WriteStringAtPos(temp1,1,0);
+    
+        LCD_seconde(compteur);
+    
+    
+        
+}
 /* ------------------------------------------------------------ */
 /***	LCD_SetWriteCgramPosition
 **
