@@ -28,6 +28,7 @@
     // *****************************************************************************
 
 void SSD_Init();
+void SSD_Task();
 void SSD_WriteDigits(unsigned char d0, unsigned char d1, unsigned char d2, unsigned char d3, \
             unsigned char dp1, unsigned char dp2, unsigned char dp3, unsigned char dp4);
 void SSD_WriteDigitsGrouped(unsigned int val, unsigned char dp);

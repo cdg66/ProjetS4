@@ -64,6 +64,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "lcd.h"
 #include "app_commands.h"
 #include "../S4e_Depart_etud.X/rgbled.h"
+#include "Time.h"
 // *****************************************************************************
 // *****************************************************************************
 // Section: Global Data Definitions
@@ -86,6 +87,34 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
  */
 
 MAIN_DATA mainData;
+int compteur_temps = 0;
+int compteur_flag = 0;
+bool flag_sec = false;
+
+static volatile int Flag_1m = 0;
+static volatile int Flag_btn = 0;
+void __ISR(_TIMER_2_VECTOR, IPL2AUTO) Timer2ISR(void)
+{
+   Flag_1m = 1;           //    Indique à la boucle principale qu'on doit traiter
+   Flag_btn = 0;
+   IFS0bits.T2IF = 0;     //    clear interrupt flag
+}
+
+#define TMR_TIME    0.001             // x us for each tick
+
+void initialize_timer_interrupt(void) {
+  T2CONbits.TCKPS = 3;                //    256 prescaler value
+  T2CONbits.TGATE = 0;                //    not gated input (the default)
+  T2CONbits.TCS = 0;                  //    PCBLK input (the default)
+  PR2 = (int)(((float)(TMR_TIME * PB_FRQ) / 256) + 0.5);   //set period register, generates one interrupt every 1 ms
+                                      //    48 kHz * 1 ms / 256 = 188
+  TMR2 = 0;                           //    initialize count to 0
+  IPC2bits.T2IP = 2;                  //    INT step 4: priority
+  IPC2bits.T2IS = 0;                  //    subpriority
+  IFS0bits.T2IF = 0;                  //    clear interrupt flag
+  IEC0bits.T2IE = 1;                  //    enable interrupt
+  T2CONbits.ON = 1;                   //    turn on Timer5
+}
 
 // *****************************************************************************
 // *****************************************************************************
@@ -106,6 +135,7 @@ MAIN_DATA mainData;
 /* Application's LED Task Function 
  Fonction qui fait clignoter une LED la LED1 à chaque 20000 execution du code
  */
+int test = 250;
 static unsigned long int counter=0;
 static void LedTask(void) {
     if(counter++ == 20000){
@@ -131,7 +161,7 @@ void ManageSwitches()
 
 void RGB_Task()
 {
-    static int data = 0;
+   /* static int data = 0;
     //ACL_ReadGValues(float *rgGVals);
     //static unsigned char tempTestRGB[3] = {5,20,50};
     if (UDP_Receive_Packet == true)
@@ -167,14 +197,14 @@ void RGB_Task()
     //bits 23-16 correspond to color R, bits 15-8 correspond to color G, bits 7-0 (LSB byte) correspond to color B.
     //Vous devez coder une fonction qui utilise les valeur des moyennes calculé 
     //et faire varier la couleur de la RGB. 
-    
+    */
 }
 
 uint32_t packetnumber = 0; 
 void Packetize_Task()
 {
      
-    if (accel_packet_ready == false)
+   /* if (accel_packet_ready == false)
     {
         return;
     }
@@ -198,7 +228,7 @@ void Packetize_Task()
 //    accel_packet_ready = false;
 //    strcpy(UDP_Send_Buffer, "test");
 //    UDP_bytes_to_send = sizeof(UDP_Send_Buffer);
-//    UDP_Send_Packet = true;
+//    UDP_Send_Packet = true;*/
 }
 
 
@@ -230,14 +260,18 @@ void MAIN_Initialize ( void )
 {
     /* Place the App state machine in its initial state. */
     mainData.state = MAIN_STATE_INIT;
-
+    LCD_CLEAR();
+    LCD_WriteStringAtPos("Heure : ", 0, 0);
     mainData.handleUSART0 = DRV_HANDLE_INVALID;
-
+    init_time();
+    initialize_timer_interrupt();
     UDP_Initialize(); // Initialisation de du serveur et client UDP
     LCD_Init(); // Initialisation de l'écran LCD
     ACL_Init(); // Initialisation de l'accéléromètre
     SSD_Init(); // Initialisation du Timer4 et de l'accéléromètre
-    RGBLED_Init(); // Initialisation de la LED RGB
+    RGBLED_Init(); // Initialisation de la LED RGBà
+    compteur_temps = set_time();
+    
 }
 
 
@@ -283,15 +317,26 @@ void MAIN_Tasks ( void )
 
         case MAIN_STATE_SERVICE_TASKS:
         {
+            if(Flag_1m == 1)
+            {       
+                Flag_1m = 0;
+                if(++compteur_flag >= 186)
+                {
+                    compteur_temps++;
+                    compteur_flag = 0;
+                    //LCD_Task(test,test,test,compteur_temps);
+                }
+                
+            }
             LedTask(); //toggle LED1 à tout les 500000 cycles
-            accel_tasks(); // 
             Packetize_Task();
-            //accel_packet_ready = false;
+            LCD_WriteStringAtPos("Heure : ", 0, 0);
+            LCD_Task(test,test,test,compteur_temps);
+            SSD_Task(test);
             UDP_Tasks();
             ManageSwitches();
         	JB1Toggle();
             LED0Toggle();
-            RGB_Task();
             break;
         }
 
