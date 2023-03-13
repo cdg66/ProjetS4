@@ -82,6 +82,7 @@ void __ISR(_EXTERNAL_4_VECTOR, IPL1AUTO) _IntHandlerExternalInterruptInstance0(v
     ACL_ReadRawValues(accel_buffer);
     ACL_GetRegister(ACL_INT_SOURCE);
     accel_data_ready = true;
+    accel_RGB_ready = true;
     PLIB_INT_SourceFlagClear(INT_ID_0, INT_SOURCE_EXTERNAL_4);
     //accel_tasks();
 }

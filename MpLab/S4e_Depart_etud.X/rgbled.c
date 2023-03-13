@@ -31,7 +31,7 @@
 volatile unsigned char bColR, bColG, bColB;
 
 
-/***	Timer5ISR
+/**	Timer5ISR
 **
 **	Description:
 **		This is the interrupt handler for Timer5. It is used to implement PDM (Pulse Density Modulation) values for each of R, G, B. 
@@ -41,8 +41,8 @@ volatile unsigned char bColR, bColG, bColB;
 **      The resulted carry bits are assigned to the digital pins corresponding to each color (LED8_R, LED8_G and LED8_B) 
 **      Carry occurs often for large values and rarely for small values.
 **      Carry bit is cleared in the accumulator.
-**          
-*void __ISR(_TIMER_5_VECTOR, IPL7AUTO) Timer5ISR(void) 
+**       
+*/void __ISR(_TIMER_5_VECTOR, IPL7AUTO) Timer5ISR(void) 
 {  
    static unsigned short sAccR = 0, sAccG = 0, sAccB = 0;
     
@@ -63,7 +63,7 @@ volatile unsigned char bColR, bColG, bColB;
     
     IFS0bits.T5IF = 0;     // clear interrupt flag
    // PLIB_INT_SourceFlagClear(INT_ID_0, INT_SOURCE_TIMER_3);
-}*/
+}
 
 // Timer period in seconds
 #define TMR_TIME    0.0200 // 300 us for each tick
@@ -207,12 +207,9 @@ void RGBLED_ConfigurePins()
 */
 void RGBLED_SetValue(unsigned char bValR, unsigned char bValG, unsigned char bValB)
 {
-
-    /*bColR = bValR;
+    bColR = bValR;
     bColG = bValG;
     bColB = bValB;
-  */
-    
     // - for PWM usage
     unsigned short wValR = bValR << 4;
     unsigned short wValG = bValG << 4;

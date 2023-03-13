@@ -128,7 +128,8 @@ void UDP_Initialize ( void ) {
 }
 
 void _UDP_ClientTasks() {
-    /*     * La tâche CLIENT de la communication UDP est une machine d'état avec les 
+    /*
+     * La tâche CLIENT de la communication UDP est une machine d'état avec les 
      * états suivant:
      * appData.clientState
      * État 1 : UDP_TCPIP_WAITING_FOR_COMMAND; État qui vérifie si une requête 
@@ -211,6 +212,7 @@ void _UDP_ClientTasks() {
 
         case UDP_TCPIP_WAIT_FOR_CONNECTION: {
             if (!TCPIP_UDP_IsConnected(appData.clientSocket)) {
+            
                 SYS_CONSOLE_MESSAGE("Client: Not connected\r\n");
                 break;
             }
@@ -219,7 +221,7 @@ void _UDP_ClientTasks() {
                 break;
             }
             SYS_CONSOLE_PRINT("Avail %d\r\n", TCPIP_UDP_PutIsReady(appData.clientSocket));
-            UDP_bytes_to_send = 484;
+            //UDP_bytes_to_send = strlen(UDP_Send_Buffer);  // cdg
             SYS_CONSOLE_PRINT("Client: Sending %s", UDP_Send_Buffer);
             TCPIP_UDP_ArrayPut(appData.clientSocket, (uint8_t*)UDP_Send_Buffer, UDP_bytes_to_send);
             
@@ -233,7 +235,15 @@ void _UDP_ClientTasks() {
 
         case UDP_TCPIP_WAIT_FOR_RESPONSE: {
             //char buffer[180];
-            //memset(UDP_Receive_Buffer, 0, sizeof(UDP_Receive_Buffer));
+            //memset(UDP_Receive_Buffer, 0, sizeof(UDP_Receive_Buffer));//////////////////////////////////////////////////
+            
+            
+            
+            
+            
+            
+            
+            
             if (SYS_TMR_SystemCountGet() > appData.mTimeOut) {
                 SYS_CONSOLE_MESSAGE("\r\nClient: Timeout waiting for response\r\n");
                 TCPIP_UDP_Close(appData.clientSocket);
@@ -249,6 +259,9 @@ void _UDP_ClientTasks() {
             if (UDP_bytes_received) {
                 TCPIP_UDP_ArrayGet(appData.clientSocket, (uint8_t*)UDP_Receive_Buffer, sizeof(UDP_Receive_Buffer)-1);
                 /*
+                 * 
+                 * 
+                 * 
                      ****** 
                  */
                 if(UDP_bytes_received > sizeof(UDP_Receive_Buffer)-1){
@@ -257,8 +270,8 @@ void _UDP_ClientTasks() {
                     UDP_bytes_received = sizeof(UDP_Receive_Buffer)-1;
                 }
                 UDP_Receive_Buffer[UDP_bytes_received] = '\0';    //append a null to display strings properly
-                SYS_CONSOLE_PRINT("\r\nClient: Client received %s\r\n", UDP_Receive_Buffer);
-                
+                SYS_CONSOLE_PRINT("\r\nClient: Client received %x%x%x%x\r\n", UDP_Receive_Buffer[3],UDP_Receive_Buffer[2],UDP_Receive_Buffer[1],UDP_Receive_Buffer[0]);
+                UDP_Receive_Packet = true;
                 // Pas de fermeture du socket on veux une connection continue
                 appData.clientState = UDP_TCPIP_WAITING_FOR_COMMAND;
             }
@@ -270,7 +283,53 @@ void _UDP_ClientTasks() {
     }
 
 }
+uint8_t * Compute(uint8_t * data, int datalen)
 
+{
+    static uint8_t Moyenne[16];
+    int32_t sommeX = 0;
+    int32_t sommeY = 0;
+    int32_t sommeZ = 0;
+    int i;
+    Moyenne[0] = data[0];
+    Moyenne[1] = data[1];
+    Moyenne[2] = data[2];
+    Moyenne[3] = data[3];
+    for(i = 0; i<40; i++)
+    {
+        sommeX = ((data[i+4]<<24) + (data[i+5]<<16) + (data[i+6]<<8) + (data[i+7]))+ sommeX;
+        sommeY = ((data[i+44]<<24) + (data[i+45]<<16) + (data[i+46]<<8) + (data[i+47]))+ sommeY;
+        sommeZ = ((data[i+84]<<24) + (data[i+85]<<16) + (data[i+86]<<8) + (data[i+87]))+ sommeZ;
+    }
+    sommeX = sommeX/40;
+    sommeY = sommeY/40;
+    sommeZ = sommeZ/40;
+    Moyenne[4] = sommeX >> 24 && 0xFFFFFF00;
+    Moyenne[5] = sommeX >> 16 && 0xFFFFFF00;
+    Moyenne[6] = sommeX >> 8 && 0xFFFFFF00;
+    Moyenne[7] = sommeX && 0xFFFFFF00;
+    Moyenne[8] = sommeY >> 24 && 0xFFFFFF00;
+    Moyenne[9] = sommeY >> 16 && 0xFFFFFF00;
+    Moyenne[10] = sommeY >> 8 && 0xFFFFFF00;
+    Moyenne[11] = sommeY && 0xFFFFFF00;
+    Moyenne[12] = sommeZ >> 24 && 0xFFFFFF00;
+    Moyenne[13] = sommeZ >> 16 && 0xFFFFFF00;
+    Moyenne[14] = sommeZ >> 8 && 0xFFFFFF00;
+    Moyenne[15] = sommeZ && 0xFFFFFF00;
+    return Moyenne;
+    
+    
+//    if (TCPIP_UDP_GetIsReady(s) == 0 )
+//        {
+//            UDP_Receive_Buffer[0]=UDP_Send_Buffer[0] ;
+//            UDP_Receive_Buffer[1]=UDP_Send_Buffer[1] ;
+//            UDP_Receive_Buffer[2]=UDP_Send_Buffer[2] ;
+//            UDP_Receive_Buffer[3]=UDP_Send_Buffer[3] ;
+//            
+//            return;
+//        }
+   
+}
 void _UDP_ServerTasks( void ) {
     /*
      * appData.serverState
@@ -343,13 +402,19 @@ void _UDP_ServerTasks( void ) {
                 int rxed = TCPIP_UDP_ArrayGet(appData.serverSocket, UDP_Server_Receive_Buffer, sizeof(UDP_Server_Receive_Buffer)-1);
                 
                 if(rxed<sizeof(UDP_Server_Receive_Buffer)-1) UDP_Server_Receive_Buffer[rxed] = 0;
-
-                SYS_CONSOLE_PRINT("\r\nServer: \tReceived a message of '%s' and length %d\r\n", UDP_Server_Receive_Buffer, rxed);
-                SYS_CONSOLE_PRINT("\r\nServer: \tServer Sending a messages: %s", UDP_Server_Receive_Buffer);
-
+                // cdg
+                 SYS_CONSOLE_PRINT("\r\nServer: \tReceived a message of %x%x%x%x and length %d\r\n", UDP_Server_Receive_Buffer[0],  UDP_Server_Receive_Buffer[1],  UDP_Server_Receive_Buffer[2],  UDP_Server_Receive_Buffer[3], rxed);
+                // cdg
+                //SYS_CONSOLE_PRINT("\r\nServer: \tReceived a message of '%s' and length %d\r\n", UDP_Server_Receive_Buffer, rxed);//cdg
+                //SYS_CONSOLE_PRINT("\r\nServer: \tServer Sending a messages: %s", UDP_Server_Receive_Buffer);//cdg
+                
                 // Transfert les données du tampon local au TCP TX FIFO. 
-                TCPIP_UDP_ArrayPut(appData.serverSocket, UDP_Server_Receive_Buffer, wCurrentChunk);
+                 uint8_t * temp;
+                 temp = Compute(UDP_Server_Receive_Buffer, rxed);
+                TCPIP_UDP_ArrayPut(appData.serverSocket,temp , wCurrentChunk); //cdg
+                //TCPIP_UDP_ArrayPut(appData.serverSocket, UDP_Server_Receive_Buffer, wCurrentChunk);// cdg
                 appData.serverState = UDP_TCPIP_CLOSING_CONNECTION;
+                SYS_CONSOLE_PRINT("\r\nServer: \tServer Sending a messages: %x%x%x%x :%x%x%x%x ", temp[0],  temp[1],  temp[2],  temp[3], temp[4],  temp[5],  temp[6],  temp[7]); //cdg
             }
            // Envoie les données (flush = envoie obligatoire des données dans la pile, peu importe la quantité de données)
            TCPIP_UDP_Flush(appData.serverSocket);

@@ -37,14 +37,12 @@
 #include "lcd.h"
 #include "ssd.h"
 #include "app_commands.h"
-#include <string.h>
 
 /* ************************************************************************** */
+
+
 float fGRangeLSB;   // global variable used to pre-compute the value in g corresponding to each count of the raw value
-int compteur1 = 0;
-int compteur2 = 0;
-int tableau_xyz[121] = {0};
-char tableau_xyz2[480] = {0};
+
 /* ------------------------------------------------------------ */
 /***	ACL_Init
 **
@@ -61,7 +59,9 @@ char tableau_xyz2[480] = {0};
 */
 uint8_t accel_buffer[accel_buf_length]; //the buffer for reading the acceleration values
 bool accel_data_ready; //a flag!
-
+bool accel_RGB_ready = false; //a flag!
+bool accel_packet_ready = false; //a flag!
+int32_t packet_accel_buffer[packet_buf_length];
 /*
  * Configuration de l'accéléromètre est faite ici
  */
@@ -102,59 +102,83 @@ void ACL_ConfigurePins()
     tris_ACL_INT2 = 1;
 }
 
-uint16_t count= 0;
+uint16_t count = 0;
 
 void accel_tasks()
 {
-    
-    if(accel_data_ready)
+    static int stackpointer = 0; 
+    if(accel_data_ready && (accel_packet_ready == false))
     {
-        //ACL_ReadRawValues(accel_buffer);
-    
-    if(SWITCH1StateGet())
-    {
+        ACL_ReadRawValues(accel_buffer);
+
+    //if(SWITCH1StateGet())
+    //{
     	signed short accelX, accelY, accelZ; 
     	accelX = ((signed int) accel_buffer[0]<<24)>>20  | accel_buffer[1] >> 4; //VR
     	accelY = ((signed int) accel_buffer[2]<<24)>>20  | accel_buffer[3] >> 4; //VR
     	accelZ = ((signed int) accel_buffer[4]<<24)>>20  | accel_buffer[5] >> 4; //VR
         //SYS_CONSOLE_PRINT("%d,%d,%d\r\n", accelX, accelY, accelZ);
-
-
-        if(compteur1 == 40)
+        
+    // signe extension
+        int32_t iaccelX, iaccelY, iaccelZ;
+        // X
+        if (accelX & 0x0800) // sign is negative
         {
-            tableau_xyz[0] = compteur2;
-            compteur2 ++;
-            memcpy(UDP_Send_Buffer, tableau_xyz, 121*sizeof(signed int));            
-            UDP_bytes_to_send = 484;
-            compteur1 = 0 ;
-            
-            UDP_Send_Packet = true;
-            
-            //int k;
+            iaccelX = 0xFFFFFFFF;
         }
-        if (compteur1 < 40 )
-        {    
-            
-            tableau_xyz[compteur1] = accelX;
-            tableau_xyz[compteur1 + 40] = accelY;
-            tableau_xyz[compteur1 + 80] = accelZ;
-            compteur1 ++;
-        }    
+        else // sign is positive
+        {
+            iaccelX = 0;
+        }
+        iaccelX = (uint32_t)accelY;
         
-            
+        //Y
+        if (accelY & 0x0800) // sign is negative
+        {
+            iaccelY = 0xFFFFFFFF;
+        }
+        else // sign is positive
+        {
+            iaccelY = 0;
+        }
+        iaccelY = (uint32_t)accelX;
         
-    }     
+        
+        //Z
+        if (accelZ & 0x0800) // sign is negative
+        {
+            iaccelZ = 0xFFFFFFFF;
+        }
+        else // sign is positive
+        {
+            iaccelZ = 0;
+        }
+        iaccelZ = (uint32_t)accelZ;
+        
+        
+    // save in buffer 
+    packet_accel_buffer[stackpointer] = iaccelX;
+    packet_accel_buffer[stackpointer+40] = iaccelY;
+    packet_accel_buffer[stackpointer+80] = iaccelZ;
+    stackpointer++;
+    if (stackpointer == 40)
+    {
+        stackpointer = 0;
+        accel_packet_ready = true;
+    }
+    
+    //}   
+        //ecrit a l'ecran
         char outbuf[80];
         sprintf(outbuf, "X: %02x%01x", accel_buffer[0], accel_buffer[1] >> 4);
         LCD_WriteStringAtPos(outbuf, 0, 0);
-        sprintf(outbuf, "Y: %02x%01x Z:  %02x%01x", accel_buffer[2], accel_buffer[3] >> 4, accel_buffer[4], accel_buffer[5] >> 4);
+        sprintf(outbuf, "Y: %02x%01x Z: %02x%01x", accel_buffer[2], accel_buffer[3] >> 4, accel_buffer[4], accel_buffer[5] >> 4);
         LCD_WriteStringAtPos(outbuf, 1, 0);
         SSD_WriteDigitsGrouped(count++, 0x1);
         accel_data_ready = false;
     }
-    
-
 }
+
 /* ------------------------------------------------------------ */
 /***	ACL_SetRegister
 **

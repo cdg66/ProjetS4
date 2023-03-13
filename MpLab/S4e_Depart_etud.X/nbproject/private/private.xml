@@ -3,12 +3,36 @@
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
-            <file>file:/C:/Users/nlavo/OneDrive/Bureau/Projet_MX3/firmware_etud/src/app_commands.c</file>
-            <file>file:/C:/Users/nlavo/OneDrive/Bureau/Projet_MX3/firmware_etud/src/main.c</file>
-            <file>file:/C:/Users/nlavo/OneDrive/Bureau/Projet_MX3/firmware_etud/S4e_Depart_etud.X/rgbled.c</file>
-            <file>file:/C:/Users/nlavo/OneDrive/Bureau/Projet_MX3/firmware_etud/src/UDP_app.c</file>
-            <file>file:/C:/Users/nlavo/OneDrive/Bureau/Projet_MX3/firmware_etud/S4e_Depart_etud.X/rgbled.h</file>
-            <file>file:/C:/Users/nlavo/OneDrive/Bureau/Projet_MX3/firmware_etud/src/accel.c</file>
+            <file>file:/home/capaciteur/Documents/Github/APP4_S4/Mplab/src/system_config/default/framework/driver/encx24j600/running_state/drv_encx24j600_running_state.c</file>
+            <file>file:/home/capaciteur/Documents/Github/APP4_S4/Mplab/src/app_commands.h</file>
+            <file>file:/home/capaciteur/Documents/Github/APP4_S4/Mplab/src/app_commands.c</file>
+            <file>file:/home/capaciteur/Documents/Github/APP4_S4/Mplab/src/system_config/default/system_tasks.c</file>
+            <file>file:/home/capaciteur/Documents/Github/APP4_S4/Mplab/src/system_config/default/framework/driver/encx24j600/drv_encx24j600_main_state.c</file>
+            <file>file:/home/capaciteur/Documents/Github/APP4_S4/Mplab/src/main.c</file>
+            <file>file:/home/capaciteur/Documents/Github/APP4_S4/Mplab/src/system_config/default/framework/system/command/sys_command.h</file>
+            <file>file:/home/capaciteur/Documents/Github/APP4_S4/Mplab/src/UDP_app.h</file>
+            <file>file:/home/capaciteur/Documents/Github/APP4_S4/Mplab/src/system_config/default/framework/tcpip/src/tcpip_manager.c</file>
+            <file>file:/home/capaciteur/Documents/Github/APP4_S4/Mplab/src/system_config/default/system_interrupt.c</file>
+            <file>file:/home/capaciteur/Documents/Github/APP4_S4/Mplab/src/system_config/default/system_definitions.h</file>
+            <file>file:/home/capaciteur/Documents/Github/APP4_S4/Mplab/src/accel.h</file>
+            <file>file:/home/capaciteur/Documents/Github/APP4_S4/Mplab/src/system_config/default/framework/system/console/sys_console.h</file>
+            <file>file:/home/capaciteur/Documents/Github/APP4_S4/Mplab/src/system_config/default/framework/driver/encx24j600/running_state/drv_encx24j600_check_int_state.c</file>
+            <file>file:/home/capaciteur/Documents/Github/APP4_S4/Mplab/src/system_config/default/framework/driver/encx24j600/drv_encx24j600_api.c</file>
+            <file>file:/home/capaciteur/Documents/Github/APP4_S4/Mplab/src/accel.c</file>
+            <file>file:/home/capaciteur/Documents/Github/APP4_S4/Mplab/src/system_config/default/framework/driver/spi/dynamic/drv_spi_tasks.c</file>
+            <file>file:/home/capaciteur/Documents/Github/APP4_S4/Mplab/src/system_config/default/framework/driver/spi/dynamic/drv_spi_master_ebm_tasks.c</file>
+            <file>file:/home/capaciteur/Documents/Github/APP4_S4/Mplab/src/system_config/default/system_config.h</file>
+            <file>file:/home/capaciteur/Documents/Github/APP4_S4/Mplab/src/system_config/default/framework/tcpip/src/udp.c</file>
+            <file>file:/home/capaciteur/Documents/Github/APP4_S4/Mplab/src/lcd.c</file>
+            <file>file:/home/capaciteur/Documents/Github/APP4_S4/Mplab/src/system_config/default/framework/peripheral/ports/templates/ports_PortsRead_MCU32_PPS.h</file>
+            <file>file:/home/capaciteur/Documents/Github/APP4_S4/Mplab/src/system_config/default/framework/driver/encx24j600/bus/spi/drv_encx24j600_spi_bus.c</file>
+            <file>file:/home/capaciteur/Documents/Github/APP4_S4/Mplab/S4e_Depart_etud.X/rgbled.c</file>
+            <file>file:/home/capaciteur/Documents/Github/APP4_S4/Mplab/src/system_config/default/framework/driver/usart/drv_usart.h</file>
+            <file>file:/home/capaciteur/Documents/Github/APP4_S4/Mplab/src/system_config/default/framework/peripheral/ports/templates/ports_PortsWrite_MCU32_PPS.h</file>
+            <file>file:/home/capaciteur/Documents/Github/APP4_S4/Mplab/src/UDP_app.c</file>
+            <file>file:/home/capaciteur/Documents/Github/APP4_S4/Mplab/src/ssd.c</file>
+            <file>file:/home/capaciteur/Documents/Github/APP4_S4/Mplab/src/i2c.c</file>
+            <file>file:/home/capaciteur/Documents/Github/APP4_S4/Mplab/src/system_config/default/framework/driver/spi/src/dynamic/drv_spi.c</file>
         </group>
     </open-files>
 </project-private>

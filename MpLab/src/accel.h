@@ -57,6 +57,11 @@ extern bool accel_data_ready;
 #define accel_buf_length 6
 extern uint8_t accel_buffer[accel_buf_length];
 
+
+#define packet_buf_length 120
+extern int32_t packet_accel_buffer[packet_buf_length];
+extern bool accel_packet_ready; //a flag!
+extern bool accel_RGBm_ready; //a flag!
 //#ifdef __cplusplus
 //extern "C" {
 //#endif
