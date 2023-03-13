@@ -180,8 +180,20 @@ void SSD_Init()
 {
     SSD_ConfigurePins();
     SSD_Timer4Setup();  
+    
 }
 
+void SSD_Task(int humidite)
+{
+
+    char decimals = "00000000";
+    
+    SSD_WriteDigitsGrouped(humidite, decimals);
+    
+
+
+
+}
 /* ------------------------------------------------------------ */
 /***	SSD_ConfigurePins
 **

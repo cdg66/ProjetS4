@@ -48,6 +48,7 @@
 
 void LCD_Init();
 void LCD_InitSequence(unsigned char bDisplaySetOptions);
+void LCD_Task(int Temperature, int humidite, int lumiere, int compteur);
 void LCD_WriteStringAtPos(char *szLn, unsigned char idxLine, unsigned char bAdr);
 void LCD_DisplaySet(unsigned char bDisplaySetOptions);
 void LCD_DisplayClear();
@@ -55,7 +56,10 @@ void LCD_DisplayShift(unsigned char fRight);
 void LCD_CursorShift(unsigned char fRight);
 void LCD_ReturnHome();
 void LCD_WriteBytesAtPosCgram(unsigned char *pBytes, unsigned char len, unsigned char bAdr);
-
+void int2char(int valeur, char * text, int nbDigit, int erase);
+void LCD_WriteIntAtPos(int value, int nbDigit, unsigned char idxLine, unsigned char idxPos, int erase);
+void LCD_seconde(unsigned int seconde);
+void LCD_CLEAR();
 // private
 unsigned char LCD_ReadByte();
 unsigned char LCD_ReadStatus();
