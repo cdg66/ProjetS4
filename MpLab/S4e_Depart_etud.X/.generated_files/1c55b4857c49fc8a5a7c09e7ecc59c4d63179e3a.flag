@@ -1,0 +1,1 @@
+$(MP_EXTRA_AS_PRE)  -c -mprocessor=$(MP_PROCESSOR_OPTION) -DXPRJ_default=$(CND_CONF)  -legacy-libc  -Wa,--defsym=__MPLAB_BUILD=1$(MP_EXTRA_AS_POST),--gdwarf-2 C:\Users\Tony\Desktop\S4\Projet\projet MX3\ProjetS4\MpLab\src\system_config\default\framework\tcpip\src\tcpip_helper_c32.S
