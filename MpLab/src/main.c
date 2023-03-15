@@ -64,7 +64,10 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "lcd.h"
 #include "app_commands.h"
 #include "../S4e_Depart_etud.X/rgbled.h"
-#include "Time.h"
+#include "btn.h"
+#include "adc.h"
+#include "aic.h"
+#include <math.h>
 // *****************************************************************************
 // *****************************************************************************
 // Section: Global Data Definitions
@@ -86,10 +89,15 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
     Application strings and buffers are be defined outside this structure.
  */
 
+unsigned int set_time();
+void init_analog();
+int get_temp();
+
 MAIN_DATA mainData;
 int compteur_temps = 0;
 int compteur_flag = 0;
-bool flag_sec = false;
+int Flag_sec = 0;
+int val_test = 0;
 
 static volatile int Flag_1m = 0;
 static volatile int Flag_btn = 0;
@@ -136,13 +144,13 @@ void initialize_timer_interrupt(void) {
  Fonction qui fait clignoter une LED la LED1 à chaque 20000 execution du code
  */
 int test = 250;
-static unsigned long int counter=0;
+/*static unsigned long int counter=0;
 static void LedTask(void) {
     if(counter++ == 20000){
         LED_ToggleValue(1);
         counter = 0;
     }  
-}
+}*/
 
 
 static bool sw0_old; 
@@ -231,30 +239,59 @@ void Packetize_Task()
 //    UDP_Send_Packet = true;*/
 }
 
+void init_analog()
+{
+    tris_PMODS_JB9 = 1;  //  Set up jb9 sur pmod analog
+    ansel_PMODS_JB9 = 1; //enable analog
+}
 
+int get_temp()
+{    
+    return ADC_AnalogRead(24);
+}
 
+void SSD_Task(int temp)
+{
+    SSD_WriteDigitsGrouped(temp, 0x00);    
+}
 
-
-
-//int moyenne()
-//{
-//    UDP_Receive_Buffer[1]
-//
-//    return;
-//}
-// *****************************************************************************
-// *****************************************************************************
-// Section: Application Initialization and State Machine Functions
-// *****************************************************************************
-// *****************************************************************************
-
-/*******************************************************************************
-  Function:
-    void MAIN_Initialize ( void )
-
-  Remarks:
-    See prototype in main.h.
- */
+unsigned int set_time()
+{
+    int sec = 0;
+    char btn= 0;
+    int position = 1;
+    while(!BTN_GetValue('C'))
+    {
+        btn = BTN_GetGroupValue();
+        switch(btn)
+        {
+            case 0b00000001:  //bouton up
+                switch(position)
+                {                
+                    case 1:
+                      sec = sec+1;
+                      while(0b00000001 == BTN_GetGroupValue());
+                      break;
+                    case 2:
+                      sec = sec+60;
+                      while(0b00000001 == BTN_GetGroupValue());
+                      break;
+                    case 3:
+                      sec = sec+3600;
+                      while(0b00000001 == BTN_GetGroupValue());
+                      break;
+                }
+                break;
+            case 0b00000010:  //bouton left
+                position++;
+                if(position > 3){position = 1;}
+                while(0b00000010 == BTN_GetGroupValue());
+                break;
+        }
+        LCD_seconde(sec);
+    }
+    return sec;
+}
 
 void MAIN_Initialize ( void )
 {
@@ -263,13 +300,14 @@ void MAIN_Initialize ( void )
     LCD_CLEAR();
     LCD_WriteStringAtPos("Heure : ", 0, 0);
     mainData.handleUSART0 = DRV_HANDLE_INVALID;
-    init_time();
     initialize_timer_interrupt();
     UDP_Initialize(); // Initialisation de du serveur et client UDP
     LCD_Init(); // Initialisation de l'écran LCD
     ACL_Init(); // Initialisation de l'accéléromètre
+    ADC_Init();
     SSD_Init(); // Initialisation du Timer4 et de l'accéléromètre
-    RGBLED_Init(); // Initialisation de la LED RGBà
+    RGBLED_Init(); // Initialisation de la LED RGB
+    init_analog();
     compteur_temps = set_time();
     
 }
@@ -317,24 +355,23 @@ void MAIN_Tasks ( void )
 
         case MAIN_STATE_SERVICE_TASKS:
         {
-            if(Flag_1m == 1)
-            {       
-                Flag_1m = 0;
-                if(++compteur_flag >= 186)
-                {
-                    compteur_temps++;
-                    compteur_flag = 0;
-                    //LCD_Task(test,test,test,compteur_temps);
-                }
-                
-            }
-            LedTask(); //toggle LED1 à tout les 500000 cycles
-            Packetize_Task();
             LCD_WriteStringAtPos("Heure : ", 0, 0);
-            LCD_Task(test,test,test,compteur_temps);
-            SSD_Task(test);
+            if(Flag_sec)
+            {
+                Flag_sec = 0;
+                val_test = get_temp();
+                float rohm = 10000*(1023.0/(float)val_test-1.0);
+                float temp_c = (1.0 /(0.001129148+(0.000234125*log(rohm))+0.0000000876741*log(rohm)*log(rohm)*log(rohm)))-273.15;
+                LCD_Task(temp_c,test,test,compteur_temps);
+                SSD_Task(val_test);
+
+            }
+            //LedTask(); //toggle LED1 à tout les 500000 cycles
+            //Packetize_Task();
+            //SSD_Task(val_test);
+            
             UDP_Tasks();
-            ManageSwitches();
+            //ManageSwitches();
         	JB1Toggle();
             LED0Toggle();
             break;
@@ -357,12 +394,19 @@ int main(void) {
     SSD_WriteDigitsGrouped(0xFA9B,0x1);
     
     while (1) {
-        //RGB_Task(); ////////
+        if(Flag_1m == 1)
+        {       
+            Flag_1m = 0;
+            if(++compteur_flag >= 200)
+            {
+                compteur_temps++;
+                compteur_flag = 0;
+                Flag_sec = 1;
+            }  
+        }
         SYS_Tasks();
-        MAIN_Tasks();
-        
-    };
-
+        MAIN_Tasks();   
+    }
     return 0;
 }
 
