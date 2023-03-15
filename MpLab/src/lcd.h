@@ -48,7 +48,7 @@
 
 void LCD_Init();
 void LCD_InitSequence(unsigned char bDisplaySetOptions);
-void LCD_Task(int Temperature, int humidite, int lumiere, int compteur);
+void LCD_Task(float Temperature, int humidite, int lumiere, int compteur);
 void LCD_WriteStringAtPos(char *szLn, unsigned char idxLine, unsigned char bAdr);
 void LCD_DisplaySet(unsigned char bDisplaySetOptions);
 void LCD_DisplayClear();

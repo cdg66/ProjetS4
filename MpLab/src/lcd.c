@@ -571,7 +571,7 @@ void LCD_WriteIntAtPos(int value, int nbDigit, unsigned char idxLine, unsigned c
 	}
 }
 
-void LCD_Task(int Temperature, int humidite, int lumiere, int compteur)
+void LCD_Task(float Temperature, int humidite, int lumiere, int compteur)
 {
    /* char temperature2[4] = (char)Temperature;
     char humidite2[4] = (char)humidite;
@@ -582,11 +582,11 @@ void LCD_Task(int Temperature, int humidite, int lumiere, int compteur)
         
         LCD_seconde(compteur);
         
-        sprintf(temp1,"Temp:%6.3f",Temperature);
+        sprintf(temp1,"Temp:%.1f",Temperature);
         LCD_WriteStringAtPos(temp1,1,0);
 
-        sprintf(temp1,"Hum:%d",humidite);
-        LCD_WriteStringAtPos(temp1,1,9);
+        sprintf(temp1,"Hu:%d",humidite);
+        LCD_WriteStringAtPos(temp1,1,10);
 
       //  sprintf(temp1,"Luminosite:%i",lumiere);
        // LCD_WriteStringAtPos(temp1,1,0);

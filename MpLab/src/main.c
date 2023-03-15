@@ -143,7 +143,7 @@ void initialize_timer_interrupt(void) {
 /* Application's LED Task Function 
  Fonction qui fait clignoter une LED la LED1 à chaque 20000 execution du code
  */
-int test = 250;
+float test = 25.16;
 /*static unsigned long int counter=0;
 static void LedTask(void) {
     if(counter++ == 20000){
@@ -252,7 +252,78 @@ int get_temp()
 
 void SSD_Task(int temp)
 {
-    SSD_WriteDigitsGrouped(temp, 0x00);    
+    int valeur = 0;
+    switch (temp)
+    {
+        case 100:
+        {
+           valeur = 256;
+           break;
+        }
+        
+         case 90 ... 99:
+        {
+           valeur = temp + 54;
+           break;
+        }
+         
+         case 80 ... 89:
+        {
+           valeur = temp + 48;
+           break;
+        }
+         
+         case 70 ... 79:
+        {
+           valeur = temp + 42;
+           break;
+        }
+         
+         case 60 ... 69:
+        {
+           valeur = temp + 36;
+           break;
+        }
+         
+         case 50 ... 59:
+        {
+           valeur = temp + 30;
+           break;
+        }
+         
+         case 40 ... 49:
+        {
+           valeur = temp + 24;
+           break;
+        }
+         
+         case 30 ... 39:
+        {
+           valeur = temp + 18;
+           break;
+        }
+         
+         case 20 ... 29:
+        {
+           valeur = temp + 12;
+           break;
+        }
+         
+         case 10 ... 19:
+        {
+           valeur = temp + 6;
+           break;
+        }
+         
+         case 0 ... 9:
+        {
+           valeur = temp;
+           break;
+        } 
+        break;
+    }
+    
+    SSD_WriteDigitsGrouped(valeur, 0x00);    
 }
 
 unsigned int set_time()
@@ -362,8 +433,8 @@ void MAIN_Tasks ( void )
                 val_test = get_temp();
                 float rohm = 10000*(1023.0/(float)val_test-1.0);
                 float temp_c = (1.0 /(0.001129148+(0.000234125*log(rohm))+0.0000000876741*log(rohm)*log(rohm)*log(rohm)))-273.15;
-                LCD_Task(temp_c,test,test,compteur_temps);
-                SSD_Task(val_test);
+                LCD_Task(test,test,test,compteur_temps);
+                SSD_Task(77);
 
             }
             //LedTask(); //toggle LED1 à tout les 500000 cycles
@@ -397,7 +468,7 @@ int main(void) {
         if(Flag_1m == 1)
         {       
             Flag_1m = 0;
-            if(++compteur_flag >= 200)
+            if(++compteur_flag >= 1000)
             {
                 compteur_temps++;
                 compteur_flag = 0;
