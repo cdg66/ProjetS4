@@ -582,17 +582,15 @@ void LCD_Task(int Temperature, int humidite, int lumiere, int compteur)
         
         LCD_seconde(compteur);
         
-        sprintf(temp1,"Temp:%i",Temperature);
+        sprintf(temp1,"Temp:%6.3f",Temperature);
         LCD_WriteStringAtPos(temp1,1,0);
 
-        sprintf(temp1,"Hum:%i",humidite);
+        sprintf(temp1,"Hum:%d",humidite);
         LCD_WriteStringAtPos(temp1,1,9);
 
       //  sprintf(temp1,"Luminosite:%i",lumiere);
        // LCD_WriteStringAtPos(temp1,1,0);
-    
-        LCD_seconde(compteur);
-    
+        
     
         
 }

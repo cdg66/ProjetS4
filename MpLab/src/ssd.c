@@ -183,17 +183,6 @@ void SSD_Init()
     
 }
 
-void SSD_Task(int humidite)
-{
-
-    char decimals = "00000000";
-    
-    SSD_WriteDigitsGrouped(humidite, decimals);
-    
-
-
-
-}
 /* ------------------------------------------------------------ */
 /***	SSD_ConfigurePins
 **

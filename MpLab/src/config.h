@@ -169,7 +169,7 @@ extern "C" {
 #define lat_LCD_DATA        LATE
 #define prt_LCD_DATA        PORTE
 #define msk_LCD_DATA        0xFF
-#define  lat_LCD_DATA_ADDR   0xBF886440
+#define lat_LCD_DATA_ADDR   0xBF886440
 #define ansel_LCD_DB2        ANSELEbits.ANSE2
 #define ansel_LCD_DB4        ANSELEbits.ANSE4
 #define ansel_LCD_DB5        ANSELEbits.ANSE5
@@ -441,6 +441,9 @@ extern "C" {
 #define tris_ADC_AN2    TRISBbits.TRISB2
 #define ansel_ADC_AN2   ANSELBbits.ANSB2
 
+// Analog input AN24
+#define tris_ADC_AN24    TRISBbits.TRISB9
+#define ansel_ADC_AN24   ANSELBbits.ANSB9
 
 // IrDA
 #define  tris_IRDA_PDOWN    TRISGbits.TRISG1
