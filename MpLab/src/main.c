@@ -98,6 +98,8 @@ void set_fan(int val_fan);
 void set_pump(int val_pump);
 void set_heat(int val_heat);
 void controle (void);
+int RGB_Task(void);
+
 
 MAIN_DATA mainData;
 int compteur_temps = 0;
@@ -112,9 +114,15 @@ float Max_temp = 22.0;
 float Max_hum = 512;
 float Min_temp = 19.0;
 float Min_hum = 300;
+int compteur_led = 0;
+int pourcent = 0;
 
+int intensite = 0;
+
+    
 static volatile int Flag_1m = 0;
 static volatile int Flag_btn = 0;
+
 void __ISR(_TIMER_2_VECTOR, IPL2AUTO) Timer2ISR(void)
 {
    Flag_1m = 1;           //    Indique à la boucle principale qu'on doit traiter
@@ -178,46 +186,20 @@ void ManageSwitches()
     sw0_old = sw0_new; 
 }
 
-void RGB_Task()
-{
-   /* static int data = 0;
-    //ACL_ReadGValues(float *rgGVals);
-    //static unsigned char tempTestRGB[3] = {5,20,50};
-    if (UDP_Receive_Packet == true)
-    {
-        data = 0;
-        UDP_Receive_Packet = false;
-        return;
-    }
-    UDP_Receive_Packet = false;
+int RGB_Task(void)
+{    
+    RGBLED_SetValue(intensite, 0, intensite );
+    compteur_led++;
     
+    if(compteur_led <= 6) intensite = intensite + 42;
+    else if((6<compteur_led) & (compteur_led <= 12)) intensite = intensite-42;
+    if(compteur_led > 12) compteur_led = 0;
 
-    // busted all the data we hold 0 until new data
-    //if (data >= 40)
-    //{
-    //    RGBLED_SetValue(0, 0, 0);
-    //    return;
-    //}
-    if (accel_RGB_ready == false)
-    {
-        return;
-    }
-    RGBLED_SetValue(UDP_Receive_Buffer[data+4], UDP_Receive_Buffer[data+44], UDP_Receive_Buffer[data+84]);
-    data++;
-    if (data >= 40)
-    {
-        data = 0;
-    }
-    //RGBLED_SetValue(tempTestRGB[0], tempTestRGB[1], tempTestRGB[2]);
-    //tempTestRGB[0]++;
-    //tempTestRGB[1]++;
-    //tempTestRGB[2]++;
-    
-    //bits 23-16 correspond to color R, bits 15-8 correspond to color G, bits 7-0 (LSB byte) correspond to color B.
-    //Vous devez coder une fonction qui utilise les valeur des moyennes calculé 
-    //et faire varier la couleur de la RGB. 
-    */
+    float prct = (intensite/255);
+    prct = (prct*100);
+    return (int)prct;
 }
+
 
 uint32_t packetnumber = 0; 
 void Packetize_Task()
@@ -301,12 +283,18 @@ void controle (void)
         set_fan(1);
         set_heat(0);
     }
+    else if((Min_temp < moy_temp) & (moy_temp < Max_temp))
+    {
+        set_fan(0);
+        set_heat(0); 
+    }
     else if(moy_temp < Min_temp)
     {
         set_fan(0);
         set_heat(1);
     }
     if(moy_hum > Max_hum) set_pump(0);
+    else if((Min_hum < moy_hum) & (moy_hum < Max_hum)) set_pump(0);
     else if(moy_hum < Min_hum) set_pump(1);
 
 }
@@ -495,8 +483,8 @@ void MAIN_Tasks ( void )
                 Flag_sec = 0;
                 //temp_c = get_temp();
                 LCD_Task(moy_temp,val_test,compteur_temps);
-                SSD_Task(val_test);
-
+                pourcent = RGB_Task();
+                SSD_Task(pourcent);
             }
             //LedTask(); //toggle LED1 à tout les 500000 cycles
             //Packetize_Task();
@@ -530,7 +518,7 @@ int main(void) {
         if(Flag_1m == 1)
         {       
             Flag_1m = 0;
-            if(++compteur_flag >= 1000)
+            if(++compteur_flag >= 200)
             {
                 compteur_temps++;
                 compteur_flag = 0;

@@ -204,7 +204,6 @@ void MAIN_Initialize ( void );
 
 void MAIN_Tasks( void );
 
-void RGB_Task();
 
 
 #endif /* _MAIN_H */
