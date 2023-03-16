@@ -528,7 +528,7 @@ void int2char(int value, char * text, int nbDigit, int erase) {
     int i = 0;
     int div = 10;
     
-    // pour les unitÈes
+    // pour les unit√©es
     text[nbDigit-i-1] = (char) (value % div) + '0'; // extrait le digit
     value = value / 10;   // divise par 10 et arrondie a la baisse.
     
@@ -545,9 +545,9 @@ void int2char(int value, char * text, int nbDigit, int erase) {
 }
 
 void LCD_WriteIntAtPos(int value, int nbDigit, unsigned char idxLine, unsigned char idxPos, int erase) {
-    // valeur  => ce qui sera affichÈ
-    // nbDigit => nombre de chiffre ‡ afficher
-    // erase   => permet d'effacer les zÈros devant le nombre
+    // valeur  => ce qui sera affich√©
+    // nbDigit => nombre de chiffre √† afficher
+    // erase   => permet d'effacer les z√©ros devant le nombre
     
     char text[nbDigit];
     int2char(value, text, nbDigit, erase);
@@ -571,28 +571,22 @@ void LCD_WriteIntAtPos(int value, int nbDigit, unsigned char idxLine, unsigned c
 	}
 }
 
-void LCD_Task(float Temperature, int humidite, int lumiere, int compteur)
+
+void LCD_Task(float Temperature, int humidite, int compteur)
 {
    /* char temperature2[4] = (char)Temperature;
     char humidite2[4] = (char)humidite;
     char lumiere2[4] = (char)lumiere;
     */
     
-        char temp1[30];
+    char temp1[30];
+    LCD_seconde(compteur);
         
-        LCD_seconde(compteur);
-        
-        sprintf(temp1,"Temp:%.1f",Temperature);
-        LCD_WriteStringAtPos(temp1,1,0);
+    sprintf(temp1,"T:%3.2f",Temperature);
+    LCD_WriteStringAtPos(temp1,1,0);
 
-        sprintf(temp1,"Hu:%d",humidite);
-        LCD_WriteStringAtPos(temp1,1,10);
-
-      //  sprintf(temp1,"Luminosite:%i",lumiere);
-       // LCD_WriteStringAtPos(temp1,1,0);
-        
-    
-        
+    LCD_WriteStringAtPos("H:", 1, 8);
+    LCD_WriteIntAtPos(humidite%1024,5, 1, 10, 0);
 }
 /* ------------------------------------------------------------ */
 /***	LCD_SetWriteCgramPosition

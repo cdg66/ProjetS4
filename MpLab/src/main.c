@@ -67,6 +67,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "btn.h"
 #include "adc.h"
 #include "aic.h"
+#include "pmods.h"
 #include <math.h>
 // *****************************************************************************
 // *****************************************************************************
@@ -89,21 +90,34 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
     Application strings and buffers are be defined outside this structure.
  */
 
-unsigned int set_time();
-void init_analog();
-int get_temp();
+unsigned int set_time(void);
+void init_analog(void);
+void init_pmod(void);
+float get_temp(void);
+void set_fan(int val_fan);
+void set_pump(int val_pump);
+void set_heat(int val_heat);
+void controle (void);
 
 MAIN_DATA mainData;
 int compteur_temps = 0;
 int compteur_flag = 0;
 int Flag_sec = 0;
-int val_test = 0;
+float temp_c = 0;
+int val_test = 1023;
+int compteu = 0;
+float moy_temp = 0;
+float moy_hum = 0;
+float Max_temp = 22.0;
+float Max_hum = 512;
+float Min_temp = 19.0;
+float Min_hum = 300;
 
 static volatile int Flag_1m = 0;
 static volatile int Flag_btn = 0;
 void __ISR(_TIMER_2_VECTOR, IPL2AUTO) Timer2ISR(void)
 {
-   Flag_1m = 1;           //    Indique à la boucle principale qu'on doit traiter
+   Flag_1m = 1;           //    Indique Ã  la boucle principale qu'on doit traiter
    Flag_btn = 0;
    IFS0bits.T2IF = 0;     //    clear interrupt flag
 }
@@ -141,9 +155,8 @@ void initialize_timer_interrupt(void) {
 
 
 /* Application's LED Task Function 
- Fonction qui fait clignoter une LED la LED1 à chaque 20000 execution du code
+ Fonction qui fait clignoter une LED la LED1 Ã  chaque 20000 execution du code
  */
-float test = 25.16;
 /*static unsigned long int counter=0;
 static void LedTask(void) {
     if(counter++ == 20000){
@@ -159,11 +172,9 @@ void ManageSwitches()
     bool sw0_new = SWITCH0StateGet();
     if((sw0_new != sw0_old) && sw0_new)
     {
-        //strcpy(UDP_Send_Buffer, "Bonjour S4\n\r");
-        //UDP_bytes_to_send = strlen(UDP_Send_Buffer);
+        PMODS_SetValue(1, 4, 1);
         UDP_Send_Packet = true;       
     }
-
     sw0_old = sw0_new; 
 }
 
@@ -203,7 +214,7 @@ void RGB_Task()
     //tempTestRGB[2]++;
     
     //bits 23-16 correspond to color R, bits 15-8 correspond to color G, bits 7-0 (LSB byte) correspond to color B.
-    //Vous devez coder une fonction qui utilise les valeur des moyennes calculé 
+    //Vous devez coder une fonction qui utilise les valeur des moyennes calculÃ© 
     //et faire varier la couleur de la RGB. 
     */
 }
@@ -238,18 +249,67 @@ void Packetize_Task()
 //    UDP_bytes_to_send = sizeof(UDP_Send_Buffer);
 //    UDP_Send_Packet = true;*/
 }
+void init_pmod(void)
+{
+    PMODS_InitPin(1, 7, 0, 0, 0);  // output vent
+    PMODS_InitPin(1, 2, 0, 0, 0);  // output water pump
+    PMODS_InitPin(1, 3, 0, 0, 0);  // output heat
+    PMODS_InitPin(1, 4, 0, 0, 0);  // output relay
+}
 
-void init_analog()
+void init_analog(void)
 {
     tris_PMODS_JB9 = 1;  //  Set up jb9 sur pmod analog
     ansel_PMODS_JB9 = 1; //enable analog
 }
-
-int get_temp()
+void set_pump(int val_pump)
+{
+    PMODS_SetValue(1, 2, val_pump);
+}
+void set_heat(int val_heat)
+{
+    PMODS_SetValue(1, 3, val_heat);
+}
+void set_fan(int val_fan)
+{
+    PMODS_SetValue(1, 7, val_fan);
+}
+float get_temp(void)
 {    
-    return ADC_AnalogRead(24);
+    float temp = 0;
+    temp = ADC_AnalogRead(24)*3.4/1024.0;
+    temp = temp - 0.5;
+    temp = temp / 0.01;
+    
+    return temp;
 }
 
+void controle (void)
+{
+    if(compteu <= 39)
+    {
+        //moy_temp = (UDP_Receive_Buffer[5+(4*compteu)] <<4)  | ((UDP_Receive_Buffer[4+(4*compteu)] & 0xF0) >>4); // Receive UDP
+        //moy_hum = (UDP_Receive_Buffer[165+(4*compteu)]<<4)  | ((UDP_Receive_Buffer[164+(4*compteu)] & 0xF0)>>4); // Receive UDP
+        moy_temp = get_temp();
+        //moy_hum = AIC_Val();
+        compteu++;
+    }
+    if(compteu >= 40)compteu = 0;
+    
+    if(moy_temp > Max_temp)
+    {
+        set_fan(1);
+        set_heat(0);
+    }
+    else if(moy_temp < Min_temp)
+    {
+        set_fan(0);
+        set_heat(1);
+    }
+    if(moy_hum > Max_hum) set_pump(0);
+    else if(moy_hum < Min_hum) set_pump(1);
+
+}
 void SSD_Task(int temp)
 {
     int valeur = 0;
@@ -326,7 +386,7 @@ void SSD_Task(int temp)
     SSD_WriteDigitsGrouped(valeur, 0x00);    
 }
 
-unsigned int set_time()
+unsigned int set_time(void)
 {
     int sec = 0;
     char btn= 0;
@@ -373,12 +433,15 @@ void MAIN_Initialize ( void )
     mainData.handleUSART0 = DRV_HANDLE_INVALID;
     initialize_timer_interrupt();
     UDP_Initialize(); // Initialisation de du serveur et client UDP
-    LCD_Init(); // Initialisation de l'écran LCD
-    ACL_Init(); // Initialisation de l'accéléromètre
+    LCD_Init(); // Initialisation de l'Ã©cran LCD
+    ACL_Init(); // Initialisation de l'accÃ©lÃ©romÃ¨tre
     ADC_Init();
-    SSD_Init(); // Initialisation du Timer4 et de l'accéléromètre
+    //AIC_Init();
+    SSD_Init(); // Initialisation du Timer4 et de l'accÃ©lÃ©romÃ¨tre
     RGBLED_Init(); // Initialisation de la LED RGB
     init_analog();
+    init_pmod();
+
     compteur_temps = set_time();
     
 }
@@ -387,12 +450,12 @@ void MAIN_Initialize ( void )
 /******************************************************************************
   Function:
     void MAIN_Tasks ( void )
- * Fonction qui execute les tâches de l'application. Cette fonction est une
- * machien d'état :
- * 1. MAIN_STATE_INIT; Initialise les périphérique de communication USART et 
- *    passe à l'état 2 quand l'initialisation est terminée.
- * 2. MAIN_STATE_SERVICE_TASKS; Execute les tâches de l'application. Ne change 
- * jamais d'état.
+ * Fonction qui execute les tÃ¢ches de l'application. Cette fonction est une
+ * machien d'Ã©tat :
+ * 1. MAIN_STATE_INIT; Initialise les pÃ©riphÃ©rique de communication USART et 
+ *    passe Ã  l'Ã©tat 2 quand l'initialisation est terminÃ©e.
+ * 2. MAIN_STATE_SERVICE_TASKS; Execute les tÃ¢ches de l'application. Ne change 
+ * jamais d'Ã©tat.
 
   Remarks:
     See prototype in main.h.
@@ -430,19 +493,18 @@ void MAIN_Tasks ( void )
             if(Flag_sec)
             {
                 Flag_sec = 0;
-                val_test = get_temp();
-                float rohm = 10000*(1023.0/(float)val_test-1.0);
-                float temp_c = (1.0 /(0.001129148+(0.000234125*log(rohm))+0.0000000876741*log(rohm)*log(rohm)*log(rohm)))-273.15;
-                LCD_Task(test,test,test,compteur_temps);
-                SSD_Task(77);
+                //temp_c = get_temp();
+                LCD_Task(moy_temp,val_test,compteur_temps);
+                SSD_Task(val_test);
 
             }
-            //LedTask(); //toggle LED1 à tout les 500000 cycles
+            //LedTask(); //toggle LED1 Ã  tout les 500000 cycles
             //Packetize_Task();
             //SSD_Task(val_test);
-            
+            controle();
+
             UDP_Tasks();
-            //ManageSwitches();
+            ManageSwitches();
         	JB1Toggle();
             LED0Toggle();
             break;
