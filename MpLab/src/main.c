@@ -117,7 +117,7 @@ static volatile int Flag_1m = 0;
 static volatile int Flag_btn = 0;
 void __ISR(_TIMER_2_VECTOR, IPL2AUTO) Timer2ISR(void)
 {
-   Flag_1m = 1;           //    Indique à la boucle principale qu'on doit traiter
+   Flag_1m = 1;           //    Indique Ã  la boucle principale qu'on doit traiter
    Flag_btn = 0;
    IFS0bits.T2IF = 0;     //    clear interrupt flag
 }
@@ -155,9 +155,8 @@ void initialize_timer_interrupt(void) {
 
 
 /* Application's LED Task Function 
- Fonction qui fait clignoter une LED la LED1 à chaque 20000 execution du code
+ Fonction qui fait clignoter une LED la LED1 Ã  chaque 20000 execution du code
  */
-
 /*static unsigned long int counter=0;
 static void LedTask(void) {
     if(counter++ == 20000){
@@ -215,7 +214,7 @@ void RGB_Task()
     //tempTestRGB[2]++;
     
     //bits 23-16 correspond to color R, bits 15-8 correspond to color G, bits 7-0 (LSB byte) correspond to color B.
-    //Vous devez coder une fonction qui utilise les valeur des moyennes calculé 
+    //Vous devez coder une fonction qui utilise les valeur des moyennes calculÃ© 
     //et faire varier la couleur de la RGB. 
     */
 }
@@ -313,7 +312,78 @@ void controle (void)
 }
 void SSD_Task(int temp)
 {
-    SSD_WriteDigitsGrouped(temp, 0x00);    
+    int valeur = 0;
+    switch (temp)
+    {
+        case 100:
+        {
+           valeur = 256;
+           break;
+        }
+        
+         case 90 ... 99:
+        {
+           valeur = temp + 54;
+           break;
+        }
+         
+         case 80 ... 89:
+        {
+           valeur = temp + 48;
+           break;
+        }
+         
+         case 70 ... 79:
+        {
+           valeur = temp + 42;
+           break;
+        }
+         
+         case 60 ... 69:
+        {
+           valeur = temp + 36;
+           break;
+        }
+         
+         case 50 ... 59:
+        {
+           valeur = temp + 30;
+           break;
+        }
+         
+         case 40 ... 49:
+        {
+           valeur = temp + 24;
+           break;
+        }
+         
+         case 30 ... 39:
+        {
+           valeur = temp + 18;
+           break;
+        }
+         
+         case 20 ... 29:
+        {
+           valeur = temp + 12;
+           break;
+        }
+         
+         case 10 ... 19:
+        {
+           valeur = temp + 6;
+           break;
+        }
+         
+         case 0 ... 9:
+        {
+           valeur = temp;
+           break;
+        } 
+        break;
+    }
+    
+    SSD_WriteDigitsGrouped(valeur, 0x00);    
 }
 
 unsigned int set_time(void)
@@ -363,11 +433,11 @@ void MAIN_Initialize ( void )
     mainData.handleUSART0 = DRV_HANDLE_INVALID;
     initialize_timer_interrupt();
     UDP_Initialize(); // Initialisation de du serveur et client UDP
-    LCD_Init(); // Initialisation de l'écran LCD
-    ACL_Init(); // Initialisation de l'accéléromètre
+    LCD_Init(); // Initialisation de l'Ã©cran LCD
+    ACL_Init(); // Initialisation de l'accÃ©lÃ©romÃ¨tre
     ADC_Init();
     //AIC_Init();
-    SSD_Init(); // Initialisation du Timer4 et de l'accéléromètre
+    SSD_Init(); // Initialisation du Timer4 et de l'accÃ©lÃ©romÃ¨tre
     RGBLED_Init(); // Initialisation de la LED RGB
     init_analog();
     init_pmod();
@@ -380,12 +450,12 @@ void MAIN_Initialize ( void )
 /******************************************************************************
   Function:
     void MAIN_Tasks ( void )
- * Fonction qui execute les tâches de l'application. Cette fonction est une
- * machien d'état :
- * 1. MAIN_STATE_INIT; Initialise les périphérique de communication USART et 
- *    passe à l'état 2 quand l'initialisation est terminée.
- * 2. MAIN_STATE_SERVICE_TASKS; Execute les tâches de l'application. Ne change 
- * jamais d'état.
+ * Fonction qui execute les tÃ¢ches de l'application. Cette fonction est une
+ * machien d'Ã©tat :
+ * 1. MAIN_STATE_INIT; Initialise les pÃ©riphÃ©rique de communication USART et 
+ *    passe Ã  l'Ã©tat 2 quand l'initialisation est terminÃ©e.
+ * 2. MAIN_STATE_SERVICE_TASKS; Execute les tÃ¢ches de l'application. Ne change 
+ * jamais d'Ã©tat.
 
   Remarks:
     See prototype in main.h.
@@ -428,7 +498,7 @@ void MAIN_Tasks ( void )
                 SSD_Task(val_test);
 
             }
-            //LedTask(); //toggle LED1 à tout les 500000 cycles
+            //LedTask(); //toggle LED1 Ã  tout les 500000 cycles
             //Packetize_Task();
             //SSD_Task(val_test);
             controle();
@@ -460,7 +530,7 @@ int main(void) {
         if(Flag_1m == 1)
         {       
             Flag_1m = 0;
-            if(++compteur_flag >= 200)
+            if(++compteur_flag >= 1000)
             {
                 compteur_temps++;
                 compteur_flag = 0;
