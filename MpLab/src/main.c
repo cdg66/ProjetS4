@@ -116,6 +116,11 @@ float Min_temp = 19.0;
 float Min_hum = 300;
 int compteur_led = 0;
 int pourcent = 0;
+int compteurBufferUDP = 4;
+
+int compteur_3200;
+int Flag_request_UDP = 0;
+uint32_t indexPaquet = 1;
 
 int intensite = 0;
 
@@ -201,9 +206,35 @@ int RGB_Task(void)
 }
 
 
-uint32_t packetnumber = 0; 
+//uint32_t packetnumber = 0; 
 void Packetize_Task()
 {
+    int memAccel[121];
+    
+    if(Flag_request_UDP)
+    {
+        int i;
+        for(i = 0; i <=1;i++);  // Initialise le buffer pour la request vers MX3 -Justin
+        {
+            if (i==0)
+            {
+                memAccel[i] = indexPaquet;
+            }
+            else
+            {
+                memAccel[i] = 0;
+            }
+        }
+        for(i=0;i<484;i++)      // Copie le buffer dans UDP_Send_Buffer puis l'envoie apres le FOR -Justin
+            {
+                char* int_bytes = (char*)&memAccel[i];
+
+                memcpy(&UDP_Send_Buffer[i*4], int_bytes, 4); 
+            }
+        UDP_bytes_to_send = 484;
+        UDP_Send_Packet = true;
+        Flag_request_UDP = false;
+    }
      
    /* if (accel_packet_ready == false)
     {
@@ -270,12 +301,19 @@ void controle (void)
 {
     if(compteu <= 39)
     {
-        //moy_temp = (UDP_Receive_Buffer[5+(4*compteu)] <<4)  | ((UDP_Receive_Buffer[4+(4*compteu)] & 0xF0) >>4); // Receive UDP
-        //moy_hum = (UDP_Receive_Buffer[165+(4*compteu)]<<4)  | ((UDP_Receive_Buffer[164+(4*compteu)] & 0xF0)>>4); // Receive UDP
-        moy_temp = get_temp();
+        /* 2 moy_temp? Je sais que 1 de MX3 et 1 de Zybo, mais on a juste une variable. Il faudrait une variable par capteur et faire un fct qui fait la moyenne des deux capteurs    -Justin*/
+        /*Dépaquétise les données recues du MX3 et les mets dans le bon ordre -Justin*/
+        moy_temp =((UDP_Receive_Buffer[compteurBufferUDP]) | ((UDP_Receive_Buffer[compteurBufferUDP+1]) << 8) | ((UDP_Receive_Buffer[compteurBufferUDP+2]) << 16) | ((UDP_Receive_Buffer[compteurBufferUDP+3]) << 24));
+        moy_hum = ((UDP_Receive_Buffer[compteurBufferUDP+160]) | ((UDP_Receive_Buffer[compteurBufferUDP+161]) << 8) | ((UDP_Receive_Buffer[compteurBufferUDP+162]) << 16) | ((UDP_Receive_Buffer[compteurBufferUDP+163]) << 24)); // Receive UDP
+        //moy_temp = get_temp();
         //moy_hum = AIC_Val();
         compteu++;
     }
+    if (compteurBufferUDP >= 156)
+    {
+        compteurBufferUDP = 4;
+    }
+        compteurBufferUDP += 4;
     if(compteu >= 40)compteu = 0;
     
     if(moy_temp > Max_temp)
@@ -523,7 +561,12 @@ int main(void) {
                 compteur_temps++;
                 compteur_flag = 0;
                 Flag_sec = 1;
-            }  
+            }
+            if(++compteur_3200 >= 3200)     //Flag levé au 3,2sec pour envoyer request UDP au MX3 -Justin
+            {
+                compteur_3200 = 0;
+                Flag_request_UDP = true;
+            }
         }
         SYS_Tasks();
         MAIN_Tasks();   
