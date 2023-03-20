@@ -69,6 +69,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "aic.h"
 #include "pmods.h"
 #include <math.h>
+#include "swt.h"
 // *****************************************************************************
 // *****************************************************************************
 // Section: Global Data Definitions
@@ -104,7 +105,11 @@ int RGB_Task(void);
 MAIN_DATA mainData;
 int compteur_temps = 0;
 int compteur_flag = 0;
+int compteur_pompe = 0;
+int attente_pompe = 0;
 int Flag_sec = 0;
+int Flag_pompe = 0;
+int Flag_attente = 1;
 float temp_c = 0;
 int val_test = 1023;
 int compteu = 0;
@@ -278,9 +283,14 @@ void controle (void)
     }
     if(compteu >= 40)compteu = 0;
     
+    
+    //SWITCH0 = FAN; SWITCH1 = HEAT; SWITCH2 = POMPE
     if(moy_temp > Max_temp)
     {
         set_fan(1);
+    }
+    else if (SWITCH0StateGet() == false)
+    {
         set_heat(0);
     }
     else if((Min_temp < moy_temp) & (moy_temp < Max_temp))
@@ -291,12 +301,32 @@ void controle (void)
     else if(moy_temp < Min_temp)
     {
         set_fan(0);
-        set_heat(1);
     }
-    if(moy_hum > Max_hum) set_pump(0);
-    else if((Min_hum < moy_hum) & (moy_hum < Max_hum)) set_pump(0);
-    else if(moy_hum < Min_hum) set_pump(1);
-
+    else
+    {
+        set_fan(1);
+    }
+    
+    if(moy_temp < Min_temp)
+    {
+        set_heat(1);
+    }else if (SWITCH1StateGet() == false)
+    {
+        set_heat(0);
+    }else
+    {
+        set_heat(1);
+    }    
+    if(((moy_hum < Min_hum && Flag_pompe == 0) || SWITCH2StateGet() == true) && Flag_attente == 1)
+    {
+        set_pump(1);
+        Flag_pompe = 1;
+        Flag_attente = 0;
+    }
+    if(Flag_pompe == 0)
+    {
+        set_pump(0);
+    }
 }
 void SSD_Task(int temp)
 {
@@ -524,6 +554,22 @@ int main(void) {
                 compteur_flag = 0;
                 Flag_sec = 1;
             }  
+            if(Flag_pompe == 1)
+            {
+                attente_pompe = 0;
+                if(++compteur_pompe >= 5000 )
+                {
+                    compteur_pompe = 0;
+                    Flag_pompe = 0;
+                } 
+            }else
+            {
+                if(++attente_pompe >= 10000 )
+                {
+                    attente_pompe = 0;
+                    Flag_attente = 1;
+                } 
+            }
         }
         SYS_Tasks();
         MAIN_Tasks();   
