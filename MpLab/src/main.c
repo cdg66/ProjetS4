@@ -70,6 +70,8 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "pmods.h"
 #include <math.h>
 #include "swt.h"
+#include "uart.h"
+
 // *****************************************************************************
 // *****************************************************************************
 // Section: Global Data Definitions
@@ -100,6 +102,8 @@ void set_pump(int val_pump);
 void set_heat(int val_heat);
 void controle (void);
 int RGB_Task(void);
+void  Uart_Task (void);
+
 
 
 MAIN_DATA mainData;
@@ -196,13 +200,25 @@ int RGB_Task(void)
     RGBLED_SetValue(intensite, 0, intensite );
     compteur_led++;
     
-    if(compteur_led <= 6) intensite = intensite + 42;
-    else if((6<compteur_led) & (compteur_led <= 12)) intensite = intensite-42;
-    if(compteur_led > 12) compteur_led = 0;
+    if(compteur_led <= 127) intensite = intensite + 2;
+    else if((127<compteur_led) & (compteur_led <= 255)) intensite = intensite-2;
+    if(compteur_led > 255) compteur_led = 0;
 
-    float prct = (intensite/255);
-    prct = (prct*100);
+    float prct = (intensite*100);
+    prct = (prct/255);
     return (int)prct;
+}
+
+
+void  Uart_Task (void)
+{
+    char str1[20];
+    UART_PutString("\n");
+    UART_PutString("| time  | time  | time  | time  |   X  |   Y  |   Z  |   M  |   P  |");
+    
+    sprintf(str1, "| Entrer temp = " " | Entrer hum = ");
+    UART_PutString(str1);
+    UART_PutString("\n");
 }
 
 
