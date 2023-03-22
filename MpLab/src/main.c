@@ -69,6 +69,9 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "aic.h"
 #include "pmods.h"
 #include <math.h>
+#include "swt.h"
+#include "uart.h"
+
 // *****************************************************************************
 // *****************************************************************************
 // Section: Global Data Definitions
@@ -99,12 +102,18 @@ void set_pump(int val_pump);
 void set_heat(int val_heat);
 void controle (void);
 int RGB_Task(void);
+void  Uart_Task (void);
+
 
 
 MAIN_DATA mainData;
 int compteur_temps = 0;
 int compteur_flag = 0;
+int compteur_pompe = 0;
+int attente_pompe = 0;
 int Flag_sec = 0;
+int Flag_pompe = 0;
+int Flag_attente = 1;
 float temp_c = 0;
 int val_test = 1023;
 int compteu = 0;
@@ -196,17 +205,30 @@ int RGB_Task(void)
     RGBLED_SetValue(intensite, 0, intensite );
     compteur_led++;
     
-    if(compteur_led <= 6) intensite = intensite + 42;
-    else if((6<compteur_led) & (compteur_led <= 12)) intensite = intensite-42;
-    if(compteur_led > 12) compteur_led = 0;
+    if(compteur_led <= 127) intensite = intensite + 2;
+    else if((127<compteur_led) & (compteur_led <= 255)) intensite = intensite-2;
+    if(compteur_led > 255) compteur_led = 0;
 
-    float prct = (intensite/255);
-    prct = (prct*100);
+    float prct = (intensite*100);
+    prct = (prct/255);
     return (int)prct;
 }
 
 
-//uint32_t packetnumber = 0; 
+
+void  Uart_Task (void)
+{
+    char str1[20];
+    UART_PutString("\n");
+    UART_PutString("| time  | time  | time  | time  |   X  |   Y  |   Z  |   M  |   P  |");
+    
+    sprintf(str1, "| Entrer temp = " " | Entrer hum = ");
+    UART_PutString(str1);
+    UART_PutString("\n");
+}
+
+
+uint32_t packetnumber = 0; 
 void Packetize_Task()
 {
     int memAccel[121];
@@ -302,7 +324,7 @@ void controle (void)
     if(compteu <= 39)
     {
         /* 2 moy_temp? Je sais que 1 de MX3 et 1 de Zybo, mais on a juste une variable. Il faudrait une variable par capteur et faire un fct qui fait la moyenne des deux capteurs    -Justin*/
-        /*Dépaquétise les données recues du MX3 et les mets dans le bon ordre -Justin*/
+        /*Dï¿½paquï¿½tise les donnï¿½es recues du MX3 et les mets dans le bon ordre -Justin*/
         moy_temp =((UDP_Receive_Buffer[compteurBufferUDP]) | ((UDP_Receive_Buffer[compteurBufferUDP+1]) << 8) | ((UDP_Receive_Buffer[compteurBufferUDP+2]) << 16) | ((UDP_Receive_Buffer[compteurBufferUDP+3]) << 24));
         moy_hum = ((UDP_Receive_Buffer[compteurBufferUDP+160]) | ((UDP_Receive_Buffer[compteurBufferUDP+161]) << 8) | ((UDP_Receive_Buffer[compteurBufferUDP+162]) << 16) | ((UDP_Receive_Buffer[compteurBufferUDP+163]) << 24)); // Receive UDP
         //moy_temp = get_temp();
@@ -316,9 +338,14 @@ void controle (void)
         compteurBufferUDP += 4;
     if(compteu >= 40)compteu = 0;
     
+    
+    //SWITCH0 = FAN; SWITCH1 = HEAT; SWITCH2 = POMPE
     if(moy_temp > Max_temp)
     {
         set_fan(1);
+    }
+    else if (SWITCH0StateGet() == false)
+    {
         set_heat(0);
     }
     else if((Min_temp < moy_temp) & (moy_temp < Max_temp))
@@ -329,12 +356,32 @@ void controle (void)
     else if(moy_temp < Min_temp)
     {
         set_fan(0);
-        set_heat(1);
     }
-    if(moy_hum > Max_hum) set_pump(0);
-    else if((Min_hum < moy_hum) & (moy_hum < Max_hum)) set_pump(0);
-    else if(moy_hum < Min_hum) set_pump(1);
-
+    else
+    {
+        set_fan(1);
+    }
+    
+    if(moy_temp < Min_temp)
+    {
+        set_heat(1);
+    }else if (SWITCH1StateGet() == false)
+    {
+        set_heat(0);
+    }else
+    {
+        set_heat(1);
+    }    
+    if(((moy_hum < Min_hum && Flag_pompe == 0) || SWITCH2StateGet() == true) && Flag_attente == 1)
+    {
+        set_pump(1);
+        Flag_pompe = 1;
+        Flag_attente = 0;
+    }
+    if(Flag_pompe == 0)
+    {
+        set_pump(0);
+    }
 }
 void SSD_Task(int temp)
 {
@@ -561,11 +608,28 @@ int main(void) {
                 compteur_temps++;
                 compteur_flag = 0;
                 Flag_sec = 1;
+
             }
-            if(++compteur_3200 >= 3200)     //Flag levé au 3,2sec pour envoyer request UDP au MX3 -Justin
+            if(++compteur_3200 >= 3200)     //Flag levï¿½ au 3,2sec pour envoyer request UDP au MX3 -Justin
             {
                 compteur_3200 = 0;
                 Flag_request_UDP = true;
+            }  
+            if(Flag_pompe == 1)
+            {
+                attente_pompe = 0;
+                if(++compteur_pompe >= 5000 )
+                {
+                    compteur_pompe = 0;
+                    Flag_pompe = 0;
+                } 
+            }else
+            {
+                if(++attente_pompe >= 10000 )
+                {
+                    attente_pompe = 0;
+                    Flag_attente = 1;
+                } 
             }
         }
         SYS_Tasks();
