@@ -508,11 +508,20 @@ void LCD_WriteStringAtPos(char *szLn, unsigned char idxLine, unsigned char idxPo
 }
 
 void LCD_seconde(unsigned int seconde) {
+    LCD_WriteStringAtPos("Heure : ", 0, 0);
     LCD_WriteIntAtPos(seconde%60, 3, 0, 13, 0);  // affichage des secondes
     LCD_WriteStringAtPos(":", 0, 13);
     LCD_WriteIntAtPos(seconde/60%60, 3, 0, 10, 0);  // affichage des minutes
     LCD_WriteStringAtPos(":", 0, 10);
     LCD_WriteIntAtPos(seconde/3600%24, 3, 0, 7, 0);  // affichage des heures
+}
+void LCD_utilisateur(int hum, float temp1) 
+{
+    LCD_WriteStringAtPos("T", 1, 3);
+    LCD_WriteIntAtPos(temp1, 3, 1, 6, 0);  // affichage temp uti
+    LCD_WriteStringAtPos("H", 1, 10);
+    LCD_WriteIntAtPos(hum, 3, 1, 13, 0);  // affichage des minutes
+
 }
 
 
@@ -572,7 +581,7 @@ void LCD_WriteIntAtPos(int value, int nbDigit, unsigned char idxLine, unsigned c
 }
 
 
-void LCD_Task(float Temperature, int humidite, int compteur)
+void LCD_Task(float Temperature, float humidite, int compteur)
 {
    /* char temperature2[4] = (char)Temperature;
     char humidite2[4] = (char)humidite;
@@ -580,13 +589,19 @@ void LCD_Task(float Temperature, int humidite, int compteur)
     */
     
     char temp1[30];
+    char hum1[30];
+    int hum_int = 0;
     LCD_seconde(compteur);
         
-    sprintf(temp1,"T:%3.2f",Temperature);
+    sprintf(temp1,"T:%3.1f",Temperature);
     LCD_WriteStringAtPos(temp1,1,0);
-
-    LCD_WriteStringAtPos("H:", 1, 8);
-    LCD_WriteIntAtPos(humidite%1024,5, 1, 10, 0);
+    LCD_WriteStringAtPos("C",1,6);
+    
+    hum_int = (int)humidite;
+    
+    sprintf(hum1,"H:%3i",hum_int);
+    LCD_WriteStringAtPos(hum1,1,9);
+    LCD_WriteStringAtPos("%",1,14);
 }
 /* ------------------------------------------------------------ */
 /***	LCD_SetWriteCgramPosition

@@ -70,7 +70,6 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "pmods.h"
 #include <math.h>
 #include "swt.h"
-#include "uart.h"
 
 // *****************************************************************************
 // *****************************************************************************
@@ -93,6 +92,10 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
     Application strings and buffers are be defined outside this structure.
  */
 
+#define TMR_TIME    0.001             // x us for each tick
+
+
+
 unsigned int set_time(void);
 void init_analog(void);
 void init_pmod(void);
@@ -103,6 +106,8 @@ void set_heat(int val_heat);
 void controle (void);
 int RGB_Task(void);
 void  Uart_Task (void);
+void ManageSwitches(void);
+void set_utilisateur_value(void);
 
 
 
@@ -126,13 +131,18 @@ float Min_hum = 300;
 int compteur_led = 0;
 int pourcent = 0;
 int compteurBufferUDP = 4;
+int compt = 1;
+int compt2 = 0;
+signed int tab_xyz[121];
 
 int compteur_3200;
 int Flag_request_UDP = 0;
 uint32_t indexPaquet = 1;
 
 int intensite = 0;
-
+float prct = 0;
+float temp_uti = 0;
+int hum_uti = 0;
     
 static volatile int Flag_1m = 0;
 static volatile int Flag_btn = 0;
@@ -144,10 +154,8 @@ void __ISR(_TIMER_2_VECTOR, IPL2AUTO) Timer2ISR(void)
    IFS0bits.T2IF = 0;     //    clear interrupt flag
 }
 
-#define TMR_TIME    0.001             // x us for each tick
-
 void initialize_timer_interrupt(void) {
-  T2CONbits.TCKPS = 3;                //    256 prescaler value
+  T2CONbits.TCKPS = 7;                //    256 prescaler value   page 174
   T2CONbits.TGATE = 0;                //    not gated input (the default)
   T2CONbits.TCS = 0;                  //    PCBLK input (the default)
   PR2 = (int)(((float)(TMR_TIME * PB_FRQ) / 256) + 0.5);   //set period register, generates one interrupt every 1 ms
@@ -159,7 +167,6 @@ void initialize_timer_interrupt(void) {
   IEC0bits.T2IE = 1;                  //    enable interrupt
   T2CONbits.ON = 1;                   //    turn on Timer5
 }
-
 // *****************************************************************************
 // *****************************************************************************
 // Section: Application Callback Functions
@@ -189,14 +196,15 @@ static void LedTask(void) {
 
 
 static bool sw0_old; 
-void ManageSwitches()
+void ManageSwitches(void)
 {
     bool sw0_new = SWITCH0StateGet();
-    if((sw0_new != sw0_old) && sw0_new)
+    /*if((sw0_new != sw0_old) && sw0_new)
     {
         PMODS_SetValue(1, 4, 1);
-        UDP_Send_Packet = true;       
-    }
+    }*/
+    if (SWITCH0StateGet() == true) PMODS_SetValue(1, 4, 1);
+    else PMODS_SetValue(1, 4, 0);
     sw0_old = sw0_new; 
 }
 
@@ -206,83 +214,93 @@ int RGB_Task(void)
     compteur_led++;
     
     if(compteur_led <= 127) intensite = intensite + 2;
-    else if((127<compteur_led) & (compteur_led <= 255)) intensite = intensite-2;
-    if(compteur_led > 255) compteur_led = 0;
+    else if((127<compteur_led) & (compteur_led < 255)) intensite = intensite-2;
+    if(compteur_led >= 255) compteur_led = 0;
 
-    float prct = (intensite*100);
+    prct = (intensite*100);
     prct = (prct/255);
     return (int)prct;
 }
 
-
-
-void  Uart_Task (void)
+void Uart_Task (void)
 {
-    char str1[20];
-    UART_PutString("\n");
-    UART_PutString("| time  | time  | time  | time  |   X  |   Y  |   Z  |   M  |   P  |");
-    
-    sprintf(str1, "| Entrer temp = " " | Entrer hum = ");
-    UART_PutString(str1);
-    UART_PutString("\n");
+    char valeur_utilisateur[100];
+
+    strcpy(valeur_utilisateur, "Test des valeurs");
+    SYS_CONSOLE_PRINT("\r Valeur utilisateur:  Lumiere = %d Temperature = %3.1f Humitdite = %i\n\r", intensite*100/255, temp_uti, hum_uti);
+    SYS_CONSOLE_PRINT("\r Valeur de lecture:  Lumiere = %d Temperature = %i Humitdite = %i\n\r", intensite*100/255, (int)moy_temp, (int)moy_hum);
+
 }
 
+void set_utilisateur_value(void)
+{
+    char btn= 0;
+    int choix = 1;
+    
+    while(!BTN_GetValue('R'))
+    {
+        btn = BTN_GetGroupValue();
+        switch(btn)
+        {
+            case 0b00000001:  //bouton up
+                switch(choix)
+                {                
+                    case 1:
+                      temp_uti = temp_uti+1;
+                      while(0b00000001 == BTN_GetGroupValue());
+                      break;
+                    case 2:
+                      hum_uti = hum_uti+5;
+                      while(0b00000001 == BTN_GetGroupValue());
+                      break;
+                }
+                break;
+            case 0b00010000:  //bouton down
+                switch(choix)
+                {                
+                    case 1:
+                      temp_uti = temp_uti-1;
+                      while(0b00010000 == BTN_GetGroupValue());
+                      break;
+                    case 2:
+                      hum_uti = hum_uti-5;
+                      while(0b00010000 == BTN_GetGroupValue());
+                      break;
+                }
+                break;
+            case 0b00000010:  //bouton left
+                choix++;
+                if(choix > 2){choix = 1;}
+                while(0b00000010 == BTN_GetGroupValue());
+                break;
+        }
+        LCD_utilisateur(hum_uti, temp_uti);
+    }
+}
 
 uint32_t packetnumber = 0; 
 void Packetize_Task()
 {
-    int memAccel[121];
-    
-    if(Flag_request_UDP)
+    if(compt <= 121)
     {
-        int i;
-        for(i = 0; i <=1;i++);  // Initialise le buffer pour la request vers MX3 -Justin
-        {
-            if (i==0)
-            {
-                memAccel[i] = indexPaquet;
-            }
-            else
-            {
-                memAccel[i] = 0;
-            }
-        }
-        for(i=0;i<484;i++)      // Copie le buffer dans UDP_Send_Buffer puis l'envoie apres le FOR -Justin
-            {
-                char* int_bytes = (char*)&memAccel[i];
+        tab_xyz[compt] = compt;
+    }
+    if(compt >= 121)
+    {
+        memcpy(UDP_Send_Buffer, tab_xyz, 121*sizeof(signed int));
 
-                memcpy(&UDP_Send_Buffer[i*4], int_bytes, 4); 
-            }
-        UDP_bytes_to_send = 484;
+    }
+    UDP_bytes_to_send = 484;
+    if(Flag_request_UDP)
+   {
+        compt++;
+        Flag_request_UDP = false;  
         UDP_Send_Packet = true;
-        Flag_request_UDP = false;
     }
-     
-   /* if (accel_packet_ready == false)
+    if(compt >= 120)
     {
-        return;
+        compt = 0; 
     }
-    accel_packet_ready = false;
-    // clear old data 
-    memset(UDP_Send_Buffer, '\0', sizeof(UDP_Send_Buffer) );
-    // add packet number to buffer
-    //memcpy(UDP_Send_Buffer,(char *)packetnumber, 4);
-    UDP_Send_Buffer[3] = (uint8_t) (packetnumber >> 24);
-    UDP_Send_Buffer[2] = (uint8_t) (packetnumber >> 16);
-    UDP_Send_Buffer[1] = (uint8_t) (packetnumber >> 8);
-    UDP_Send_Buffer[0] = (uint8_t) (packetnumber);
-    packetnumber++;
-    // concat acc buffer
-    //strcpy(UDP_Send_Buffer+4, (char*)packet_accel_buffer);
-    memcpy(UDP_Send_Buffer+4, packet_accel_buffer, sizeof(packet_accel_buffer));
-    memset(UDP_Send_Buffer+485 , '\0', 1 );
-    // 
-    UDP_bytes_to_send = 485;
-    UDP_Send_Packet = true;
-//    accel_packet_ready = false;
-//    strcpy(UDP_Send_Buffer, "test");
-//    UDP_bytes_to_send = sizeof(UDP_Send_Buffer);
-//    UDP_Send_Packet = true;*/
 }
 void init_pmod(void)
 {
@@ -312,7 +330,7 @@ void set_fan(int val_fan)
 float get_temp(void)
 {    
     float temp = 0;
-    temp = ADC_AnalogRead(24)*3.4/1024.0;
+    temp = ADC_AnalogRead(24)*3.22/1024.0;
     temp = temp - 0.5;
     temp = temp / 0.01;
     
@@ -321,14 +339,21 @@ float get_temp(void)
 
 void controle (void)
 {
+    /*
+    if (SWITCH1StateGet() == true)set_pump(1);
+    else set_pump(0);
+    if (SWITCH2StateGet() == true)set_fan(1);
+    else set_fan(0);
+    if (SWITCH3StateGet() == true)set_heat(1);
+    else set_heat(0);
+    */
+    
     if(compteu <= 39)
     {
-        /* 2 moy_temp? Je sais que 1 de MX3 et 1 de Zybo, mais on a juste une variable. Il faudrait une variable par capteur et faire un fct qui fait la moyenne des deux capteurs    -Justin*/
-        /*D�paqu�tise les donn�es recues du MX3 et les mets dans le bon ordre -Justin*/
+        //2 moy_temp? Je sais que 1 de MX3 et 1 de Zybo, mais on a juste une variable. Il faudrait une variable par capteur et faire un fct qui fait la moyenne des deux capteurs    -Justin
+        //D�paqu�tise les donn�es recues du MX3 et les mets dans le bon ordre -Justin
         moy_temp =((UDP_Receive_Buffer[compteurBufferUDP]) | ((UDP_Receive_Buffer[compteurBufferUDP+1]) << 8) | ((UDP_Receive_Buffer[compteurBufferUDP+2]) << 16) | ((UDP_Receive_Buffer[compteurBufferUDP+3]) << 24));
         moy_hum = ((UDP_Receive_Buffer[compteurBufferUDP+160]) | ((UDP_Receive_Buffer[compteurBufferUDP+161]) << 8) | ((UDP_Receive_Buffer[compteurBufferUDP+162]) << 16) | ((UDP_Receive_Buffer[compteurBufferUDP+163]) << 24)); // Receive UDP
-        //moy_temp = get_temp();
-        //moy_hum = AIC_Val();
         compteu++;
     }
     if (compteurBufferUDP >= 156)
@@ -336,43 +361,50 @@ void controle (void)
         compteurBufferUDP = 4;
     }
         compteurBufferUDP += 4;
-    if(compteu >= 40)compteu = 0;
-    
+    if(compteu >= 40)
+    {
+        compteu = 0;
+        //moy_temp = moy_temp/40.0;
+        //moy_hum = moy_hum/40.0;
+    }
     
     //SWITCH0 = FAN; SWITCH1 = HEAT; SWITCH2 = POMPE
-    if(moy_temp > Max_temp)
+    if (SWITCH1StateGet() == true)
+    {
+        set_heat(1);
+    }
+    else if(moy_temp <= temp_uti && SWITCH1StateGet() == false)
+    {
+        set_heat(0);    
+    }
+        
+    if (SWITCH2StateGet() == true)
     {
         set_fan(1);
     }
-    else if (SWITCH0StateGet() == false)
+    else if(moy_temp <= temp_uti && SWITCH1StateGet() == false)
     {
-        set_heat(0);
-    }
-    else if((Min_temp < moy_temp) & (moy_temp < Max_temp))
-    {
-        set_fan(0);
-        set_heat(0); 
-    }
-    else if(moy_temp < Min_temp)
-    {
-        set_fan(0);
-    }
-    else
-    {
-        set_fan(1);
+        set_fan(0);    
     }
     
-    if(moy_temp < Min_temp)
+    if(moy_temp > temp_uti )
     {
+        set_fan(1);
+         
+    }
+    else if(moy_temp < temp_uti - 3)
+    {   
         set_heat(1);
-    }else if (SWITCH1StateGet() == false)
-    {
-        set_heat(0);
-    }else
-    {
-        set_heat(1);
-    }    
-    if(((moy_hum < Min_hum && Flag_pompe == 0) || SWITCH2StateGet() == true) && Flag_attente == 1)
+    }  
+        
+        
+   // if((temp_uti <= moy_temp) && (moy_temp <= temp_uti) && SWITCH2StateGet() == false && SWITCH1StateGet() == false)
+   // {
+      //  set_fan(0);
+     //   set_heat(0); 
+   // }
+    
+    if(((moy_hum < hum_uti-3 && Flag_pompe == 0) || SWITCH3StateGet() == true) && Flag_attente == 1)
     {
         set_pump(1);
         Flag_pompe = 1;
@@ -383,6 +415,8 @@ void controle (void)
         set_pump(0);
     }
 }
+
+
 void SSD_Task(int temp)
 {
     int valeur = 0;
@@ -502,20 +536,24 @@ void MAIN_Initialize ( void )
     /* Place the App state machine in its initial state. */
     mainData.state = MAIN_STATE_INIT;
     LCD_CLEAR();
-    LCD_WriteStringAtPos("Heure : ", 0, 0);
     mainData.handleUSART0 = DRV_HANDLE_INVALID;
     initialize_timer_interrupt();
     UDP_Initialize(); // Initialisation de du serveur et client UDP
     LCD_Init(); // Initialisation de l'écran LCD
     ACL_Init(); // Initialisation de l'accéléromètre
     ADC_Init();
+    //UART_InitPoll(115200);
     //AIC_Init();
     SSD_Init(); // Initialisation du Timer4 et de l'accéléromètre
     RGBLED_Init(); // Initialisation de la LED RGB
     init_analog();
     init_pmod();
-
     compteur_temps = set_time();
+    LCD_CLEAR();
+    set_utilisateur_value();
+    LCD_CLEAR();
+    LCD_WriteStringAtPos("Heure : ", 0, 0);
+
     
 }
 
@@ -562,20 +600,19 @@ void MAIN_Tasks ( void )
 
         case MAIN_STATE_SERVICE_TASKS:
         {
-            LCD_WriteStringAtPos("Heure : ", 0, 0);
             if(Flag_sec)
             {
                 Flag_sec = 0;
-                //temp_c = get_temp();
-                LCD_Task(moy_temp,val_test,compteur_temps);
+                temp_c = get_temp();
+                LCD_Task(temp_c,moy_hum,compteur_temps);
                 pourcent = RGB_Task();
                 SSD_Task(pourcent);
+                Uart_Task();
+                LED2Toggle();
             }
             //LedTask(); //toggle LED1 à tout les 500000 cycles
-            //Packetize_Task();
-            //SSD_Task(val_test);
+            Packetize_Task();
             controle();
-
             UDP_Tasks();
             ManageSwitches();
         	JB1Toggle();
@@ -597,18 +634,16 @@ int main(void) {
     SYS_Initialize(NULL);
     MAIN_Initialize();
     SYS_INT_Enable();
-    SSD_WriteDigitsGrouped(0xFA9B,0x1);
     
     while (1) {
         if(Flag_1m == 1)
         {       
             Flag_1m = 0;
-            if(++compteur_flag >= 200)
+            if(++compteur_flag >= 1000)
             {
                 compteur_temps++;
                 compteur_flag = 0;
                 Flag_sec = 1;
-
             }
             if(++compteur_3200 >= 3200)     //Flag lev� au 3,2sec pour envoyer request UDP au MX3 -Justin
             {
