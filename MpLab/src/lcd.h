@@ -59,7 +59,7 @@ void LCD_WriteBytesAtPosCgram(unsigned char *pBytes, unsigned char len, unsigned
 void int2char(int valeur, char * text, int nbDigit, int erase);
 void LCD_WriteIntAtPos(int value, int nbDigit, unsigned char idxLine, unsigned char idxPos, int erase);
 void LCD_seconde(unsigned int seconde);
-void LCD_utilisateur(int hum, float temp1);
+void LCD_utilisateur(int hum, float temp1, int lumiere);
 
 void LCD_CLEAR();
 // private

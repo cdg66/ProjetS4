@@ -100,25 +100,36 @@ unsigned int set_time(void);
 void init_analog(void);
 void init_pmod(void);
 float get_temp(void);
+void set_lum(int val_lum);
 void set_fan(int val_fan);
 void set_pump(int val_pump);
 void set_heat(int val_heat);
 void controle (void);
 int RGB_Task(void);
 void  Uart_Task (void);
-void ManageSwitches(void);
 void set_utilisateur_value(void);
-
+int Lumiere_task(void);
 
 
 MAIN_DATA mainData;
 int compteur_temps = 0;
+int compteur_flag_lecture = 0;
+
 int compteur_flag = 0;
 int compteur_pompe = 0;
 int attente_pompe = 0;
 int Flag_sec = 0;
+int Flag_lecture = 0;
+
+int Flag_lum = 0;
+int Flag_heat = 0;
+int Flag_pump = 0;
+int Flag_fan = 0;
+
+
 int Flag_pompe = 0;
 int Flag_attente = 1;
+int flag_lum = 1;
 float temp_c = 0;
 int val_test = 1023;
 int compteu = 0;
@@ -129,6 +140,8 @@ float Max_hum = 512;
 float Min_temp = 19.0;
 float Min_hum = 300;
 int compteur_led = 0;
+int compteur_lumiere = 0;
+int time_light = 0;
 int pourcent = 0;
 int compteurBufferUDP = 4;
 int compt = 1;
@@ -143,7 +156,8 @@ int intensite = 0;
 float prct = 0;
 float temp_uti = 0;
 int hum_uti = 0;
-    
+int temps_uti = 0;
+int temps_seconde = 0;
 static volatile int Flag_1m = 0;
 static volatile int Flag_btn = 0;
 
@@ -195,22 +209,10 @@ static void LedTask(void) {
 }*/
 
 
-static bool sw0_old; 
-void ManageSwitches(void)
-{
-    bool sw0_new = SWITCH0StateGet();
-    /*if((sw0_new != sw0_old) && sw0_new)
-    {
-        PMODS_SetValue(1, 4, 1);
-    }*/
-    if (SWITCH0StateGet() == true) PMODS_SetValue(1, 4, 1);
-    else PMODS_SetValue(1, 4, 0);
-    sw0_old = sw0_new; 
-}
 
 int RGB_Task(void)
 {    
-    RGBLED_SetValue(intensite, 0, intensite );
+    RGBLED_SetValue(intensite, 0, intensite);
     compteur_led++;
     
     if(compteur_led <= 127) intensite = intensite + 2;
@@ -221,15 +223,53 @@ int RGB_Task(void)
     prct = (prct/255);
     return (int)prct;
 }
+int Lumiere_task(void)
+{    
+    compteur_lumiere++;
+    temps_seconde = temps_uti*60;
+    if(flag_lum)
+    {
+        if(compteur_lumiere <= temps_seconde) 
+        {
+            set_lum(1);
+        }
+        if(compteur_lumiere > temps_seconde) 
+        {
+            flag_lum = 0;
+            set_lum(0);
+        }
+    }
+    if(compteur_lumiere >= 120) 
+    {
+        compteur_lumiere = 0;
+        flag_lum = 1;
+    }
+    return compteur_lumiere;
+}
+
 
 void Uart_Task (void)
-{
-    char valeur_utilisateur[100];
+{   
+    //SYS_CONSOLE_Flush(2);*/
 
-    strcpy(valeur_utilisateur, "Test des valeurs");
-    SYS_CONSOLE_PRINT("\r Valeur utilisateur:  Lumiere = %d Temperature = %3.1f Humitdite = %i\n\r", intensite*100/255, temp_uti, hum_uti);
-    SYS_CONSOLE_PRINT("\r Valeur de lecture:  Lumiere = %d Temperature = %i Humitdite = %i\n\r", intensite*100/255, (int)moy_temp, (int)moy_hum);
-
+    SYS_CONSOLE_PRINT("Valeur utilisateur:"
+            "   Lumiere: %d"
+            "   Temperature: %f3.1"
+            "   Humidite: %i\n\n",
+            temps_uti, temp_uti, hum_uti);
+    SYS_CONSOLE_PRINT("Valeur de lecture: "
+            "   Lumiere: %d"
+            "   Temperature: %f3.1"
+            "   Humidite: %i\n\n",
+            intensite*100/255, moy_temp, moy_hum);
+    SYS_CONSOLE_PRINT("Sortie:"
+            "   Pompe: %i"
+            "   Ventillateur: %i"
+            "   Chauffage: %i"
+            "   Lumiere: %i\n\n",
+            Flag_pump, Flag_fan, Flag_heat, Flag_lum);
+    SYS_CONSOLE_PRINT("___________________________________________\n\n");
+    
 }
 
 void set_utilisateur_value(void)
@@ -244,13 +284,17 @@ void set_utilisateur_value(void)
         {
             case 0b00000001:  //bouton up
                 switch(choix)
-                {                
+                {      
                     case 1:
-                      temp_uti = temp_uti+1;
+                      hum_uti = hum_uti+5;
                       while(0b00000001 == BTN_GetGroupValue());
                       break;
                     case 2:
-                      hum_uti = hum_uti+5;
+                      temp_uti = temp_uti+1;
+                      while(0b00000001 == BTN_GetGroupValue());
+                      break;
+                    case 3:
+                      temps_uti = temps_uti+1;
                       while(0b00000001 == BTN_GetGroupValue());
                       break;
                 }
@@ -259,22 +303,26 @@ void set_utilisateur_value(void)
                 switch(choix)
                 {                
                     case 1:
-                      temp_uti = temp_uti-1;
+                      hum_uti = hum_uti-5;
                       while(0b00010000 == BTN_GetGroupValue());
                       break;
                     case 2:
-                      hum_uti = hum_uti-5;
+                      temp_uti = temp_uti-1;
+                      while(0b00010000 == BTN_GetGroupValue());
+                      break;
+                    case 3:
+                      temps_uti = temps_uti-1;
                       while(0b00010000 == BTN_GetGroupValue());
                       break;
                 }
                 break;
             case 0b00000010:  //bouton left
                 choix++;
-                if(choix > 2){choix = 1;}
+                if(choix > 3){choix = 1;}
                 while(0b00000010 == BTN_GetGroupValue());
                 break;
         }
-        LCD_utilisateur(hum_uti, temp_uti);
+        LCD_utilisateur(hum_uti, temp_uti, temps_uti);
     }
 }
 
@@ -313,24 +361,32 @@ void init_pmod(void)
 void init_analog(void)
 {
     tris_PMODS_JB9 = 1;  //  Set up jb9 sur pmod analog
-    ansel_PMODS_JB9 = 1; //enable analog
+    ansel_PMODS_JB9 = 1; //  enable analog
+}
+void set_lum(int val_lum)
+{
+    PMODS_SetValue(1, 4, val_lum);
+    Flag_lum = val_lum;
 }
 void set_pump(int val_pump)
 {
     PMODS_SetValue(1, 2, val_pump);
+    Flag_pump = val_pump;
 }
 void set_heat(int val_heat)
 {
     PMODS_SetValue(1, 3, val_heat);
+    Flag_heat = val_heat;
 }
 void set_fan(int val_fan)
 {
     PMODS_SetValue(1, 7, val_fan);
+    Flag_fan = val_fan;
 }
 float get_temp(void)
 {    
     float temp = 0;
-    temp = ADC_AnalogRead(24)*3.22/1024.0;
+    temp = ADC_AnalogRead(24)*3.4/1024.0;
     temp = temp - 0.5;
     temp = temp / 0.01;
     
@@ -339,14 +395,6 @@ float get_temp(void)
 
 void controle (void)
 {
-    /*
-    if (SWITCH1StateGet() == true)set_pump(1);
-    else set_pump(0);
-    if (SWITCH2StateGet() == true)set_fan(1);
-    else set_fan(0);
-    if (SWITCH3StateGet() == true)set_heat(1);
-    else set_heat(0);
-    */
     
     if(compteu <= 39)
     {
@@ -367,43 +415,48 @@ void controle (void)
         //moy_temp = moy_temp/40.0;
         //moy_hum = moy_hum/40.0;
     }
+    if (SWITCH0StateGet() == true)
+    {
+        set_lum(1);
+    }
     
-    //SWITCH0 = FAN; SWITCH1 = HEAT; SWITCH2 = POMPE
     if (SWITCH1StateGet() == true)
     {
         set_heat(1);
     }
-    else if(moy_temp <= temp_uti && SWITCH1StateGet() == false)
+    else if(moy_temp > temp_uti)
     {
-        set_heat(0);    
+        set_fan(1);
+        set_heat(0); 
+    }
+    else if(moy_temp < temp_uti - 3)
+    {
+        set_heat(1); 
+    }
+    else if ((moy_temp >= temp_uti - 3) && (moy_temp <= temp_uti))
+    {
+        set_heat(0); 
     }
         
     if (SWITCH2StateGet() == true)
     {
         set_fan(1);
     }
-    else if(moy_temp <= temp_uti && SWITCH1StateGet() == false)
-    {
-        set_fan(0);    
-    }
-    
-    if(moy_temp > temp_uti )
-    {
-        set_fan(1);
-         
-    }
     else if(moy_temp < temp_uti - 3)
-    {   
+    {
+        set_fan(0);
         set_heat(1);
-    }  
+    }
+    else if(moy_temp > temp_uti)
+    {
+        set_fan(1); 
+    }
+    else if ((moy_temp >= temp_uti - 3) && (moy_temp <= temp_uti))
+    {
+        set_fan(0);
+    }
         
         
-   // if((temp_uti <= moy_temp) && (moy_temp <= temp_uti) && SWITCH2StateGet() == false && SWITCH1StateGet() == false)
-   // {
-      //  set_fan(0);
-     //   set_heat(0); 
-   // }
-    
     if(((moy_hum < hum_uti-3 && Flag_pompe == 0) || SWITCH3StateGet() == true) && Flag_attente == 1)
     {
         set_pump(1);
@@ -542,8 +595,6 @@ void MAIN_Initialize ( void )
     LCD_Init(); // Initialisation de l'écran LCD
     ACL_Init(); // Initialisation de l'accéléromètre
     ADC_Init();
-    //UART_InitPoll(115200);
-    //AIC_Init();
     SSD_Init(); // Initialisation du Timer4 et de l'accéléromètre
     RGBLED_Init(); // Initialisation de la LED RGB
     init_analog();
@@ -603,18 +654,21 @@ void MAIN_Tasks ( void )
             if(Flag_sec)
             {
                 Flag_sec = 0;
-                temp_c = get_temp();
                 LCD_Task(temp_c,moy_hum,compteur_temps);
                 pourcent = RGB_Task();
+                time_light = Lumiere_task();
                 SSD_Task(pourcent);
                 Uart_Task();
                 LED2Toggle();
             }
-            //LedTask(); //toggle LED1 à tout les 500000 cycles
+            if(Flag_lecture)
+            {
+                Flag_lecture = 0;
+                temp_c = get_temp();
+            }
             Packetize_Task();
             controle();
             UDP_Tasks();
-            ManageSwitches();
         	JB1Toggle();
             LED0Toggle();
             break;
@@ -639,6 +693,11 @@ int main(void) {
         if(Flag_1m == 1)
         {       
             Flag_1m = 0;
+            if(++compteur_flag_lecture >= 80)
+            {
+                compteur_flag_lecture = 0;
+                Flag_lecture = 1;
+            }
             if(++compteur_flag >= 1000)
             {
                 compteur_temps++;

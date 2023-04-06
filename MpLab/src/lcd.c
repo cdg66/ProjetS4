@@ -515,11 +515,13 @@ void LCD_seconde(unsigned int seconde) {
     LCD_WriteStringAtPos(":", 0, 10);
     LCD_WriteIntAtPos(seconde/3600%24, 3, 0, 7, 0);  // affichage des heures
 }
-void LCD_utilisateur(int hum, float temp1) 
+void LCD_utilisateur(int hum, float temp1, int lumiere) 
 {
-    LCD_WriteStringAtPos("T", 1, 3);
-    LCD_WriteIntAtPos(temp1, 3, 1, 6, 0);  // affichage temp uti
-    LCD_WriteStringAtPos("H", 1, 10);
+    LCD_WriteStringAtPos("L", 1, 0);
+    LCD_WriteIntAtPos(lumiere, 3, 1, 1, 0);  // affichage temp uti
+    LCD_WriteStringAtPos("T", 1, 6);
+    LCD_WriteIntAtPos(temp1, 3, 1, 7, 0);  // affichage temp uti
+    LCD_WriteStringAtPos("H", 1, 12);
     LCD_WriteIntAtPos(hum, 3, 1, 13, 0);  // affichage des minutes
 
 }
